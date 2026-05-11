@@ -1,4 +1,4 @@
-import type { AppConfig, Bookmark } from "../config/schema";
+import type { AppConfig, Bookmark } from "../config/schema.js";
 
 export type HealthStatus = "up" | "down" | "unknown";
 
@@ -32,7 +32,7 @@ export function buildPublicSnapshot(config: AppConfig, cached: PublicSnapshotInp
       name,
       bookmarks: config.bookmarks
         .filter((bookmark) => bookmark.group === name)
-        .map((bookmark) => publicBookmark(bookmark, cached.health[bookmark.name]))
+        .map((bookmark) => publicBookmark(bookmark, cached.health[bookmarkHealthKey(bookmark)] ?? cached.health[bookmark.name]))
     }));
 
   return {
@@ -47,6 +47,10 @@ export function buildPublicSnapshot(config: AppConfig, cached: PublicSnapshotInp
     },
     groups
   };
+}
+
+export function bookmarkHealthKey(bookmark: Bookmark): string {
+  return `${bookmark.group}\u0000${bookmark.name}\u0000${bookmark.url}`;
 }
 
 function publicBookmark(bookmark: Bookmark, health?: CachedHealth[string]) {
