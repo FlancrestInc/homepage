@@ -5,9 +5,16 @@ import path from "node:path";
 export async function readJsonCache<T>(filePath: string, fallback: T): Promise<T> {
   try {
     return JSON.parse(await readFile(filePath, "utf8")) as T;
-  } catch {
-    return fallback;
+  } catch (error) {
+    if (error instanceof SyntaxError || isFileNotFoundError(error)) {
+      return fallback;
+    }
+    throw error;
   }
+}
+
+function isFileNotFoundError(error: unknown) {
+  return typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
 }
 
 export async function writeJsonCache(filePath: string, value: unknown): Promise<void> {

@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -124,5 +124,13 @@ describe("JSON cache store", () => {
 
     await expect(readJsonCache(missingPath, { fallback: true })).resolves.toEqual({ fallback: true });
     await expect(readJsonCache(invalidPath, ["fallback"])).resolves.toEqual(["fallback"]);
+  });
+
+  it("rethrows unexpected read errors", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "homepage-cache-"));
+    const directoryPath = path.join(dir, "cache-directory");
+    await mkdir(directoryPath);
+
+    await expect(readJsonCache(directoryPath, { fallback: true })).rejects.toThrow();
   });
 });
