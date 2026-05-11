@@ -1,0 +1,60 @@
+theme:
+  mode: dark
+  accentColor: "#72a6ff"
+  background:
+    type: color
+    value: "#1d2a3b"
+
+layout:
+  editorButton: bottom-right
+  groups:
+    - name: Common
+      order: 1
+    - name: Self-Hosting
+      order: 2
+    - name: Development
+      order: 3
+
+bookmarks:
+  - name: Grafana
+    group: Self-Hosting
+    icon: si-grafana
+    url: https://grafana.example.com
+    health:
+      mode: default
+  - name: GitHub
+    group: Development
+    icon: si-github
+    url: https://github.com
+    health:
+      mode: default
+
+widgets:
+  refreshInterval: 30s
+  time:
+    enabled: true
+    format: "MMM d, yyyy h:mm a"
+    showSeconds: false
+    hourCycle: "12"
+    showTimezone: false
+  weather:
+    enabled: false
+    provider: open-meteo
+    location: Pleasant Grove, UT
+    units: imperial
+    refreshInterval: 30m
+  monitors:
+    source: prometheus
+    prometheusUrl: http://prometheus:9090
+    historyWindow: 6h
+    sampleInterval: 5m
+    refreshInterval: 5m
+    servers:
+      - name: Barnabas
+        enabled: true
+        cpuQuery: '100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle", instance="barnabas"}[5m])) * 100)'
+        ramQuery: '(1 - (node_memory_MemAvailable_bytes{instance="barnabas"} / node_memory_MemTotal_bytes{instance="barnabas"})) * 100'
+
+healthChecks:
+  defaultInterval: 5m
+  timeout: 5s
