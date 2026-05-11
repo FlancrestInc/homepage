@@ -18,6 +18,18 @@ describe("config store", () => {
     expect(config.bookmarks).toEqual([]);
   });
 
+  it("returns a fresh default config for each missing file load", async () => {
+    const configPath = await tempConfigPath();
+    const firstConfig = await loadConfig(configPath);
+    firstConfig.theme.mode = "light";
+    firstConfig.layout.groups.push({ name: "Mutated", order: 99 });
+
+    const secondConfig = await loadConfig(configPath);
+
+    expect(secondConfig.theme.mode).toBe("dark");
+    expect(secondConfig.layout.groups).toEqual([]);
+  });
+
   it("loads valid yaml config", async () => {
     const configPath = await tempConfigPath();
     await writeFile(configPath, [
@@ -51,6 +63,8 @@ describe("config store", () => {
     expect(nextConfig.theme.mode).toBe("light");
     expect(await readFile(configPath, "utf8")).toContain("mode: light");
     const files = await readdir(path.dirname(configPath));
-    expect(files.some((file) => file.startsWith("homepage.yml.backup."))).toBe(true);
+    const backupFile = files.find((file) => file.startsWith("homepage.yml.backup."));
+    expect(backupFile).toBeDefined();
+    await expect(readFile(path.join(path.dirname(configPath), backupFile ?? ""), "utf8")).resolves.toContain("mode: dark");
   });
 });
