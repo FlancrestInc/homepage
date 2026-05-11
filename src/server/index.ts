@@ -3,6 +3,7 @@ import Fastify, { type FastifyInstance } from "fastify";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { readEnv, type AppEnv } from "./env.js";
+import { startScheduler } from "./jobs/scheduler.js";
 import { registerConfigRoutes } from "./routes/config.js";
 import { registerPublicRoutes } from "./routes/public.js";
 
@@ -29,6 +30,13 @@ export async function buildApp(env: AppEnv, options: BuildOptions = {}): Promise
         return reply.code(404).send({ error: "not_found" });
       }
       return reply.sendFile("index.html", path.resolve(env.staticDir));
+    });
+  }
+
+  if (options.startJobs ?? true) {
+    const scheduler = await startScheduler(env);
+    app.addHook("onClose", async () => {
+      scheduler.stop();
     });
   }
 
