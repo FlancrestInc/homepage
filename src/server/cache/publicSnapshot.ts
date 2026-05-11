@@ -32,7 +32,7 @@ export function buildPublicSnapshot(config: AppConfig, cached: PublicSnapshotInp
       name,
       bookmarks: config.bookmarks
         .filter((bookmark) => bookmark.group === name)
-        .map((bookmark) => publicBookmark(bookmark, cached.health[bookmarkHealthKey(bookmark)] ?? cached.health[bookmark.name]))
+        .map((bookmark) => publicBookmark(bookmark, cached.health[bookmarkHealthKey(bookmark)]))
     }));
 
   return {

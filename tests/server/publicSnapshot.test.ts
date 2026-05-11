@@ -76,6 +76,32 @@ describe("buildPublicSnapshot", () => {
     expect(snapshot.groups[0]?.bookmarks[0]?.status).toBe("up");
     expect(snapshot.groups[1]?.bookmarks[0]?.status).toBe("down");
   });
+
+  it("ignores stale name-keyed health for duplicate bookmark names", () => {
+    const duplicateConfig: AppConfig = {
+      ...config,
+      layout: {
+        ...config.layout,
+        groups: [
+          { name: "Common", order: 1 },
+          { name: "Development", order: 2 }
+        ]
+      },
+      bookmarks: [
+        { name: "Portal", group: "Common", icon: "mdi-web", url: "https://portal.example.com", health: { mode: "default", method: "GET", headers: {}, expectedStatuses: [200] } },
+        { name: "Portal", group: "Development", icon: "mdi-web", url: "https://dev-portal.example.com", health: { mode: "default", method: "GET", headers: {}, expectedStatuses: [200] } }
+      ]
+    };
+
+    const snapshot = buildPublicSnapshot(duplicateConfig, {
+      health: { Portal: { status: "down", checkedAt: "2026-05-11T17:00:00.000Z" } },
+      weather: null,
+      monitors: []
+    });
+
+    expect(snapshot.groups[0]?.bookmarks[0]?.status).toBe("unknown");
+    expect(snapshot.groups[1]?.bookmarks[0]?.status).toBe("unknown");
+  });
 });
 
 describe("JSON cache store", () => {
