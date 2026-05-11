@@ -1,18 +1,405 @@
 :root {
   color-scheme: dark;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #1d2a3b;
+  background: #172233;
   color: #e8f0ff;
+  font-size: 16px;
+  --accent-color: #72a6ff;
+  --page-background: #1d2a3b;
+  --panel-background: rgba(12, 20, 32, 0.72);
+  --panel-border: rgba(203, 217, 242, 0.14);
+  --muted-text: #9fb0c9;
+  --soft-text: #c8d5ea;
+  --status-up: #45d483;
+  --status-down: #ff6978;
+  --status-unknown: #9ca9ba;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  overflow: hidden;
 }
 
 .app-shell {
+  width: 100%;
   min-height: 100vh;
+  max-height: 100vh;
+  padding: 14px 18px 16px;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 14px;
+  background: var(--page-background);
+  overflow: hidden;
+}
+
+.loading-shell {
+  place-items: center;
+  grid-template-rows: 1fr;
+  color: var(--soft-text);
+}
+
+.widget-band {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: 42px minmax(82px, auto);
+  gap: 8px;
+}
+
+.widget-summary,
+.monitor-card,
+.bookmark-group {
+  background: var(--panel-background);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(18px);
+}
+
+.widget-summary {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(220px, auto);
+  align-items: center;
+  gap: 12px;
+  padding: 7px 12px;
+}
+
+.time-widget,
+.weather-widget,
+.monitor-header,
+.monitor-values {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.time-widget,
+.weather-widget {
+  gap: 10px;
+}
+
+.weather-widget {
+  justify-content: flex-end;
+}
+
+.date-line,
+.weather-temp {
+  color: #ffffff;
+  font-size: 1.1rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.snapshot-line,
+.weather-meta,
+.monitor-meta {
+  color: var(--muted-text);
+  font-size: 0.78rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.monitor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 8px;
+  min-height: 0;
+}
+
+.monitor-card {
+  min-height: 82px;
+  padding: 9px 10px 8px;
+  display: grid;
+  grid-template-rows: auto 34px auto;
+  gap: 4px;
+}
+
+.empty-monitor {
+  align-content: center;
+  gap: 3px;
+}
+
+.monitor-header,
+.monitor-values {
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.monitor-name {
+  color: #f7fbff;
+  font-size: 0.86rem;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.monitor-sparkline {
+  width: 100%;
+  height: 34px;
+  overflow: visible;
+}
+
+.sparkline-axis {
+  stroke: rgba(203, 217, 242, 0.13);
+  stroke-width: 1;
+}
+
+.sparkline-cpu,
+.sparkline-ram {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sparkline-cpu {
+  stroke: #66a8ff;
+}
+
+.sparkline-ram {
+  stroke: #63d887;
+}
+
+.cpu-value,
+.ram-value {
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.cpu-value {
+  color: #8fc0ff;
+}
+
+.ram-value {
+  color: #8ce8a8;
+}
+
+.bookmark-groups {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(214px, max-content));
+  align-content: start;
+  justify-content: center;
+  gap: 12px;
+  overflow: hidden;
+}
+
+.bookmark-group {
+  width: max-content;
+  max-width: 100%;
+  padding: 10px;
+}
+
+.bookmark-group h2 {
+  margin: 0 0 8px;
+  color: #edf4ff;
+  font-size: 0.84rem;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.bookmark-list {
+  --group-columns: 4;
+  display: grid;
+  grid-template-columns: repeat(var(--group-columns), 60px);
+  gap: 8px;
+}
+
+.bookmark-button {
+  position: relative;
+  width: 60px;
+  height: 60px;
   display: grid;
   place-items: center;
+  color: #eff6ff;
+  text-decoration: none;
+  background: rgba(238, 244, 255, 0.08);
+  border: 1px solid rgba(219, 232, 255, 0.12);
+  border-radius: 8px;
+  outline: none;
+  transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
+}
+
+.bookmark-button::after {
+  content: "";
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--status-unknown);
+  box-shadow: 0 0 0 2px rgba(12, 20, 32, 0.9);
+}
+
+.bookmark-button.status-up::after {
+  background: var(--status-up);
+}
+
+.bookmark-button.status-down::after {
+  background: var(--status-down);
+}
+
+.bookmark-button.status-unknown::after {
+  background: var(--status-unknown);
+}
+
+.bookmark-button:hover,
+.bookmark-button:focus-visible {
+  z-index: 2;
+  transform: translateY(-1px);
+  background: rgba(238, 244, 255, 0.13);
+  border-color: var(--accent-color);
+}
+
+.bookmark-icon {
+  max-width: 42px;
+  padding: 0 4px;
+  font-size: 1.35rem;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bookmark-label {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 7px);
+  max-width: 180px;
+  padding: 5px 8px;
+  color: #ffffff;
+  background: rgba(8, 14, 24, 0.96);
+  border: 1px solid rgba(219, 232, 255, 0.18);
+  border-radius: 6px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+  font-size: 0.76rem;
+  line-height: 1.2;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+  white-space: nowrap;
+}
+
+.bookmark-button:hover .bookmark-label,
+.bookmark-button:focus-visible .bookmark-label {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.settings-button {
+  position: fixed;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  color: #eef5ff;
+  background: rgba(10, 17, 28, 0.78);
+  border: 1px solid rgba(219, 232, 255, 0.22);
+  border-radius: 8px;
+  cursor: pointer;
+  z-index: 10;
+}
+
+.settings-button.bottom-right {
+  right: 18px;
+  bottom: 16px;
+}
+
+.settings-button.bottom-left {
+  left: 18px;
+  bottom: 16px;
+}
+
+.settings-button:hover,
+.settings-button:focus-visible {
+  border-color: var(--accent-color);
+  outline: none;
+}
+
+.refresh-error {
+  position: fixed;
+  right: 72px;
+  bottom: 16px;
+  max-width: 360px;
+  margin: 0;
+  padding: 9px 11px;
+  color: #ffdce1;
+  background: rgba(78, 20, 30, 0.9);
+  border: 1px solid rgba(255, 105, 120, 0.35);
+  border-radius: 8px;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 760px) {
+  body {
+    overflow: auto;
+  }
+
+  .app-shell {
+    min-height: 100vh;
+    max-height: none;
+    padding: 12px;
+    overflow: visible;
+  }
+
+  .widget-band {
+    grid-template-rows: auto auto;
+  }
+
+  .widget-summary {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .time-widget,
+  .weather-widget {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .monitor-grid,
+  .bookmark-groups {
+    grid-template-columns: 1fr;
+  }
+
+  .bookmark-groups {
+    justify-content: stretch;
+    overflow: visible;
+  }
+
+  .bookmark-group {
+    width: 100%;
+  }
+
+  .bookmark-list {
+    grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+  }
+
+  .bookmark-button {
+    width: 100%;
+    min-width: 56px;
+    height: 56px;
+  }
+
+  .settings-button.bottom-right,
+  .settings-button.bottom-left {
+    right: 14px;
+    left: auto;
+    bottom: 14px;
+  }
+
+  .refresh-error {
+    left: 12px;
+    right: 66px;
+    bottom: 14px;
+  }
 }

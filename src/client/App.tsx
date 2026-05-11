@@ -1,7 +1,98 @@
+import { Settings } from "lucide-react";
+import type { CSSProperties } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { getPublicSnapshot } from "./api";
+import { BookmarkGrid } from "./components/BookmarkGrid";
+import { WidgetBand } from "./components/WidgetBand";
+import type { PublicSnapshot } from "./types";
+
 export function App() {
+  const [snapshot, setSnapshot] = useState<PublicSnapshot | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    let intervalId: number | undefined;
+
+    async function loadInitialSnapshot() {
+      try {
+        const nextSnapshot = await getPublicSnapshot();
+        if (cancelled) return;
+        setSnapshot(nextSnapshot);
+        setError(null);
+
+        intervalId = window.setInterval(async () => {
+          try {
+            const refreshedSnapshot = await getPublicSnapshot();
+            if (!cancelled) {
+              setSnapshot(refreshedSnapshot);
+              setError(null);
+            }
+          } catch (refreshError) {
+            if (!cancelled) {
+              setError(errorMessage(refreshError));
+            }
+          }
+        }, durationToMs(nextSnapshot.widgets.refreshInterval));
+      } catch (loadError) {
+        if (!cancelled) {
+          setError(errorMessage(loadError));
+        }
+      }
+    }
+
+    void loadInitialSnapshot();
+
+    return () => {
+      cancelled = true;
+      if (intervalId !== undefined) {
+        window.clearInterval(intervalId);
+      }
+    };
+  }, []);
+
+  const shellStyle = useMemo(() => {
+    if (!snapshot) return undefined;
+    const background = snapshot.theme.background;
+    return {
+      "--accent-color": snapshot.theme.accentColor,
+      "--page-background": background.type === "image" ? `#1d2a3b url("${background.value}") center / cover fixed` : background.value
+    } as CSSProperties;
+  }, [snapshot]);
+
+  if (!snapshot) {
+    return (
+      <main className="app-shell loading-shell">
+        <p>{error ?? "Loading homepage"}</p>
+      </main>
+    );
+  }
+
   return (
-    <main className="app-shell">
-      <h1>Bookmarks Homepage</h1>
+    <main className="app-shell" style={shellStyle}>
+      <WidgetBand
+        generatedAt={snapshot.generatedAt}
+        time={snapshot.widgets.time}
+        weather={snapshot.widgets.weather}
+        monitors={snapshot.widgets.monitors}
+      />
+      <BookmarkGrid groups={snapshot.groups} />
+      {error ? <p className="refresh-error">Refresh failed: {error}</p> : null}
+      <button className={`settings-button ${snapshot.layout.editorButton}`} type="button" aria-label="Open settings">
+        <Settings aria-hidden="true" size={18} strokeWidth={2} />
+      </button>
     </main>
   );
+}
+
+function durationToMs(value: string) {
+  const match = value.match(/^(\d+)(s|m|h|d)$/);
+  if (!match) return 30000;
+  const amount = Number(match[1]);
+  const unit = match[2] as "s" | "m" | "h" | "d";
+  return amount * ({ s: 1000, m: 60000, h: 3600000, d: 86400000 }[unit] ?? 1000);
+}
+
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Snapshot request failed";
 }
