@@ -31,14 +31,17 @@ export async function queryGlancesCurrent(input: { baseUrl: string; timeoutMs?: 
   const cpu = (await cpuResponse.json()) as GlancesCpuResponse;
   const memory = (await memoryResponse.json()) as GlancesMemoryResponse;
   return {
-    cpuPercent: finitePercent(cpu.total),
-    ramPercent: finitePercent(memory.percent)
+    cpuPercent: requiredFinitePercent(cpu.total, "CPU"),
+    ramPercent: requiredFinitePercent(memory.percent, "RAM")
   };
 }
 
-function finitePercent(value: unknown) {
+function requiredFinitePercent(value: unknown, label: string) {
   const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
+  if (!Number.isFinite(parsed)) {
+    throw new Error(`Glances ${label} percent is missing or invalid`);
+  }
+  return parsed;
 }
 
 function normalizedBaseUrl(baseUrl: string) {

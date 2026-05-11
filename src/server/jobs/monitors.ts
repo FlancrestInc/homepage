@@ -31,6 +31,7 @@ export async function refreshMonitors(config: MonitorsConfig, fetchImpl: FetchIm
       .map(async (server) => {
         const source = server.source ?? config.source;
         const updatedAt = new Date().toISOString();
+        const previousCard = previous.find((card) => card.name === server.name);
 
         try {
           if (source === "glances") {
@@ -38,7 +39,6 @@ export async function refreshMonitors(config: MonitorsConfig, fetchImpl: FetchIm
               throw new Error("Glances URL is required");
             }
             const current = await queryGlancesCurrent({ baseUrl: server.glancesUrl, timeoutMs, fetchImpl });
-            const previousCard = previous.find((card) => card.name === server.name);
             const cpuHistory = appendBoundedHistory(previousCard?.cpu.history ?? [], { timestamp: updatedAt, value: current.cpuPercent }, start, maxHistoryPoints);
             const ramHistory = appendBoundedHistory(previousCard?.ram.history ?? [], { timestamp: updatedAt, value: current.ramPercent }, start, maxHistoryPoints);
             return {
@@ -87,8 +87,8 @@ export async function refreshMonitors(config: MonitorsConfig, fetchImpl: FetchIm
           return {
             name: server.name,
             updatedAt,
-            cpu: { current: null, history: [] },
-            ram: { current: null, history: [] },
+            cpu: { current: null, history: boundedHistory(previousCard?.cpu.history ?? [], start, maxHistoryPoints) },
+            ram: { current: null, history: boundedHistory(previousCard?.ram.history ?? [], start, maxHistoryPoints) },
             error: error instanceof Error ? error.message : "Monitor refresh failed"
           };
         }
@@ -101,8 +101,12 @@ function lastValue(points: MetricPoint[]) {
 }
 
 function appendBoundedHistory(previous: MetricPoint[], next: MetricPoint, startSeconds: number, maxPoints: number) {
+  return boundedHistory([...previous, next], startSeconds, maxPoints);
+}
+
+function boundedHistory(points: MetricPoint[], startSeconds: number, maxPoints: number) {
   const cutoffMs = startSeconds * 1000;
-  return [...previous, next]
+  return points
     .filter((point) => {
       const timestamp = Date.parse(point.timestamp);
       return Number.isFinite(timestamp) && timestamp >= cutoffMs && Number.isFinite(point.value);
