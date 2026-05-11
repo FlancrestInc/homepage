@@ -13,11 +13,12 @@ type GlancesMemoryResponse = {
   percent?: number;
 };
 
-export async function queryGlancesCurrent(input: { baseUrl: string; fetchImpl?: FetchImpl }): Promise<GlancesSnapshot> {
+export async function queryGlancesCurrent(input: { baseUrl: string; timeoutMs?: number; fetchImpl?: FetchImpl }): Promise<GlancesSnapshot> {
   const fetchImpl = input.fetchImpl ?? fetch;
+  const requestInit = { signal: AbortSignal.timeout(input.timeoutMs ?? 10000) };
   const [cpuResponse, memoryResponse] = await Promise.all([
-    fetchImpl(new URL("/api/3/cpu", normalizedBaseUrl(input.baseUrl))),
-    fetchImpl(new URL("/api/3/mem", normalizedBaseUrl(input.baseUrl)))
+    fetchImpl(new URL("/api/3/cpu", normalizedBaseUrl(input.baseUrl)), requestInit),
+    fetchImpl(new URL("/api/3/mem", normalizedBaseUrl(input.baseUrl)), requestInit)
   ]);
 
   if (!cpuResponse.ok) {

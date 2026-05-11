@@ -11,16 +11,13 @@ export type PrometheusRangeInput = {
   start: number;
   end: number;
   step: string;
+  timeoutMs?: number;
   fetchImpl?: FetchImpl;
 };
 
 type PrometheusRangeResponse = {
   status?: string;
-  data?: {
-    result?: Array<{
-      values?: Array<[number | string, string]>;
-    }>;
-  };
+  data?: unknown;
   error?: string;
 };
 
@@ -31,7 +28,7 @@ export async function queryPrometheusRange(input: PrometheusRangeInput): Promise
   url.searchParams.set("end", String(input.end));
   url.searchParams.set("step", input.step);
 
-  const response = await (input.fetchImpl ?? fetch)(url);
+  const response = await (input.fetchImpl ?? fetch)(url, { signal: AbortSignal.timeout(input.timeoutMs ?? 10000) });
   if (!response.ok) {
     throw new Error(`Prometheus query failed with status ${response.status}`);
   }
@@ -40,18 +37,41 @@ export async function queryPrometheusRange(input: PrometheusRangeInput): Promise
   if (body.status !== "success") {
     throw new Error(body.error ?? "Prometheus query failed");
   }
+  if (!isPrometheusData(body.data)) {
+    throw new Error("Malformed Prometheus response: data.result must be an array");
+  }
 
-  return (body.data?.result?.[0]?.values ?? [])
-    .map(([timestamp, value]) => ({
-      timestamp: localIsoTimestamp(Number(timestamp)),
-      value: Number(value)
-    }))
-    .filter((point) => Number.isFinite(point.value));
+  const result = body.data.result;
+  if (result.length === 0) {
+    return [];
+  }
+
+  const series = result[0];
+  if (!series || !Array.isArray(series.values)) {
+    throw new Error("Malformed Prometheus response: result values must be an array");
+  }
+
+  return series.values.map((sample, index) => {
+    if (!Array.isArray(sample) || sample.length < 2) {
+      throw new Error(`Malformed Prometheus sample at index ${index}`);
+    }
+    const timestamp = Number(sample[0]);
+    const value = Number(sample[1]);
+    if (!Number.isFinite(timestamp)) {
+      throw new Error(`Malformed Prometheus timestamp at index ${index}`);
+    }
+    if (!Number.isFinite(value)) {
+      throw new Error(`Malformed Prometheus value at index ${index}`);
+    }
+    return {
+      timestamp: new Date(timestamp * 1000).toISOString(),
+      value
+    };
+  });
 }
 
-function localIsoTimestamp(timestampSeconds: number) {
-  const date = new Date(timestampSeconds * 1000);
-  return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString();
+function isPrometheusData(value: unknown): value is { result: Array<{ values?: unknown[] }> } {
+  return typeof value === "object" && value !== null && "result" in value && Array.isArray(value.result);
 }
 
 function normalizedBaseUrl(baseUrl: string) {

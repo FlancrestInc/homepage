@@ -19,10 +19,11 @@ export type MonitorCard = {
   error?: string;
 };
 
-export async function refreshMonitors(config: MonitorsConfig, fetchImpl: FetchImpl = fetch): Promise<MonitorCard[]> {
+export async function refreshMonitors(config: MonitorsConfig, fetchImpl: FetchImpl = fetch, previous: MonitorCard[] = [], timeoutMs = 10000): Promise<MonitorCard[]> {
   const now = new Date();
   const end = Math.floor(now.getTime() / 1000);
   const start = end - Math.floor(durationToMs(config.historyWindow) / 1000);
+  const maxHistoryPoints = Math.max(1, Math.floor(durationToMs(config.historyWindow) / durationToMs(config.sampleInterval)) + 1);
 
   return Promise.all(
     config.servers
@@ -36,12 +37,15 @@ export async function refreshMonitors(config: MonitorsConfig, fetchImpl: FetchIm
             if (!server.glancesUrl) {
               throw new Error("Glances URL is required");
             }
-            const current = await queryGlancesCurrent({ baseUrl: server.glancesUrl, fetchImpl });
+            const current = await queryGlancesCurrent({ baseUrl: server.glancesUrl, timeoutMs, fetchImpl });
+            const previousCard = previous.find((card) => card.name === server.name);
+            const cpuHistory = appendBoundedHistory(previousCard?.cpu.history ?? [], { timestamp: updatedAt, value: current.cpuPercent }, start, maxHistoryPoints);
+            const ramHistory = appendBoundedHistory(previousCard?.ram.history ?? [], { timestamp: updatedAt, value: current.ramPercent }, start, maxHistoryPoints);
             return {
               name: server.name,
               updatedAt,
-              cpu: { current: current.cpuPercent, history: [{ timestamp: updatedAt, value: current.cpuPercent }] },
-              ram: { current: current.ramPercent, history: [{ timestamp: updatedAt, value: current.ramPercent }] }
+              cpu: { current: current.cpuPercent, history: cpuHistory },
+              ram: { current: current.ramPercent, history: ramHistory }
             };
           }
 
@@ -59,6 +63,7 @@ export async function refreshMonitors(config: MonitorsConfig, fetchImpl: FetchIm
               start,
               end,
               step: config.sampleInterval,
+              timeoutMs,
               fetchImpl
             }),
             queryPrometheusRange({
@@ -67,6 +72,7 @@ export async function refreshMonitors(config: MonitorsConfig, fetchImpl: FetchIm
               start,
               end,
               step: config.sampleInterval,
+              timeoutMs,
               fetchImpl
             })
           ]);
@@ -92,6 +98,16 @@ export async function refreshMonitors(config: MonitorsConfig, fetchImpl: FetchIm
 
 function lastValue(points: MetricPoint[]) {
   return points.at(-1)?.value ?? null;
+}
+
+function appendBoundedHistory(previous: MetricPoint[], next: MetricPoint, startSeconds: number, maxPoints: number) {
+  const cutoffMs = startSeconds * 1000;
+  return [...previous, next]
+    .filter((point) => {
+      const timestamp = Date.parse(point.timestamp);
+      return Number.isFinite(timestamp) && timestamp >= cutoffMs && Number.isFinite(point.value);
+    })
+    .slice(-maxPoints);
 }
 
 function durationToMs(value: string): number {

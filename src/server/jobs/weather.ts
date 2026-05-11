@@ -19,7 +19,7 @@ type OpenMeteoResponse = {
   };
 };
 
-export async function refreshWeather(config: WeatherConfig, fetchImpl: FetchImpl = fetch): Promise<CachedWeather> {
+export async function refreshWeather(config: WeatherConfig, fetchImpl: FetchImpl = fetch, timeoutMs = 10000): Promise<CachedWeather> {
   const updatedAt = new Date();
   const base = {
     updatedAt: updatedAt.toISOString(),
@@ -42,7 +42,7 @@ export async function refreshWeather(config: WeatherConfig, fetchImpl: FetchImpl
     url.searchParams.set("current", "temperature_2m,weather_code");
     url.searchParams.set("temperature_unit", config.units === "imperial" ? "fahrenheit" : "celsius");
 
-    const response = await fetchImpl(url);
+    const response = await fetchImpl(url, { signal: AbortSignal.timeout(timeoutMs) });
     if (!response.ok) {
       throw new Error(`Weather query failed with status ${response.status}`);
     }

@@ -1,9 +1,9 @@
 import path from "node:path";
-import { writeJsonCache } from "../cache/cacheStore.js";
+import { readJsonCache, writeJsonCache } from "../cache/cacheStore.js";
 import { loadConfig } from "../config/store.js";
 import type { AppEnv } from "../env.js";
 import { refreshHealthChecks } from "./healthChecks.js";
-import { refreshMonitors } from "./monitors.js";
+import { type MonitorCard, refreshMonitors } from "./monitors.js";
 import { refreshWeather } from "./weather.js";
 
 export type SchedulerHandle = {
@@ -21,12 +21,17 @@ export function durationToMs(value: string): number {
 export async function startScheduler(env: AppEnv): Promise<SchedulerHandle> {
   const config = await loadConfig(env.configPath);
   const intervals: NodeJS.Timeout[] = [];
+  const healthRunner = createNoOverlapRunner(() => runHealthChecks(env));
+  const weatherRunner = createNoOverlapRunner(() => runWeather(env));
+  const monitorsRunner = createNoOverlapRunner(() => runMonitors(env));
 
-  await Promise.all([runHealthChecks(env), runWeather(env), runMonitors(env)]);
+  healthRunner();
+  weatherRunner();
+  monitorsRunner();
 
-  intervals.push(setInterval(() => void runHealthChecks(env), durationToMs(config.healthChecks.defaultInterval)));
-  intervals.push(setInterval(() => void runWeather(env), durationToMs(config.widgets.weather.refreshInterval)));
-  intervals.push(setInterval(() => void runMonitors(env), durationToMs(config.widgets.monitors.refreshInterval)));
+  intervals.push(setInterval(healthRunner, durationToMs(config.healthChecks.defaultInterval)));
+  intervals.push(setInterval(weatherRunner, durationToMs(config.widgets.weather.refreshInterval)));
+  intervals.push(setInterval(monitorsRunner, durationToMs(config.widgets.monitors.refreshInterval)));
 
   return {
     stop: () => {
@@ -34,6 +39,23 @@ export async function startScheduler(env: AppEnv): Promise<SchedulerHandle> {
         clearInterval(interval);
       }
     }
+  };
+}
+
+export function createNoOverlapRunner(job: () => Promise<void>): () => void {
+  let running = false;
+  return () => {
+    if (running) {
+      return;
+    }
+    running = true;
+    void job()
+      .catch((error) => {
+        reportJobError("scheduled job", error);
+      })
+      .finally(() => {
+        running = false;
+      });
   };
 }
 
@@ -63,7 +85,8 @@ async function runWeather(env: AppEnv) {
 async function runMonitors(env: AppEnv) {
   try {
     const config = await loadConfig(env.configPath);
-    const monitors = await refreshMonitors(config.widgets.monitors);
+    const previous = await readJsonCache<MonitorCard[]>(path.join(env.cacheDir, "monitors.json"), []);
+    const monitors = await refreshMonitors(config.widgets.monitors, fetch, previous);
     await writeJsonCache(path.join(env.cacheDir, "monitors.json"), monitors);
   } catch (error) {
     reportJobError("monitors", error);
