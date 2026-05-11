@@ -1,7 +1,7 @@
 import fastifyStatic from "@fastify/static";
 import Fastify from "fastify";
 import path from "node:path";
-import { readEnv } from "./env";
+import { readEnv } from "./env.js";
 
 const env = readEnv();
 const app = Fastify({ logger: true });
