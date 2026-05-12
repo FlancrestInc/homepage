@@ -1,6 +1,7 @@
 import { AlertCircle, Check, Save, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getConfig, saveConfig } from "../api";
+import { validateRawConfigShape } from "../configValidation";
 import type { AppConfig } from "../types";
 import { BookmarkEditor } from "./BookmarkEditor";
 import { ThemeEditor } from "./ThemeEditor";
@@ -113,7 +114,13 @@ export function EditorDrawer({ open, onClose, onSaved }: EditorDrawerProps) {
   function handleRawConfigChange(value: string) {
     setRawConfig(value);
     try {
-      setDraft(JSON.parse(value) as AppConfig);
+      const parsedConfig = JSON.parse(value) as unknown;
+      const validation = validateRawConfigShape(parsedConfig);
+      if (!validation.ok) {
+        setRawError(validation.message);
+        return;
+      }
+      setDraft(validation.config);
       setRawError(null);
       setError(null);
     } catch (parseError) {
