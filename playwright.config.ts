@@ -8,6 +8,10 @@ export default defineConfig({
   },
   webServer: {
     command: "npm run build && npm run start",
+    env: {
+      ...process.env,
+      HOMEPAGE_CONFIG_DIR: "test-results/e2e-config"
+    },
     url: "http://127.0.0.1:3000",
     reuseExistingServer: !process.env.CI,
     timeout: 120000

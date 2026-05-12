@@ -148,15 +148,16 @@ describe("weather job", () => {
 
 describe("monitor jobs", () => {
   it("accumulates bounded Glances history from previous cache data", async () => {
+    const previousTimestamp = minutesAgo(5);
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce({ ok: true, json: async () => ({ total: 33 }) })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ percent: 44 }) });
     const previous: MonitorCard[] = [{
       name: "NAS",
-      updatedAt: "2026-05-11T17:15:00.000Z",
-      cpu: { current: 22, history: [{ timestamp: "2026-05-11T17:15:00.000Z", value: 22 }] },
-      ram: { current: 35, history: [{ timestamp: "2026-05-11T17:15:00.000Z", value: 35 }] }
+      updatedAt: previousTimestamp,
+      cpu: { current: 22, history: [{ timestamp: previousTimestamp, value: 22 }] },
+      ram: { current: 35, history: [{ timestamp: previousTimestamp, value: 35 }] }
     }];
 
     const result = await refreshMonitors({
@@ -174,22 +175,23 @@ describe("monitor jobs", () => {
   });
 
   it("preserves bounded previous histories when a monitor refresh fails", async () => {
+    const recentTimestamp = minutesAgo(5);
     const fetchMock = vi.fn().mockRejectedValue(new Error("Glances unavailable"));
     const previous: MonitorCard[] = [{
       name: "NAS",
-      updatedAt: "2026-05-11T17:15:00.000Z",
+      updatedAt: recentTimestamp,
       cpu: {
         current: 22,
         history: [
           { timestamp: "2025-05-11T17:15:00.000Z", value: 11 },
-          { timestamp: "2026-05-11T17:15:00.000Z", value: 22 }
+          { timestamp: recentTimestamp, value: 22 }
         ]
       },
       ram: {
         current: 35,
         history: [
           { timestamp: "2025-05-11T17:15:00.000Z", value: 12 },
-          { timestamp: "2026-05-11T17:15:00.000Z", value: 35 }
+          { timestamp: recentTimestamp, value: 35 }
         ]
       }
     }];
@@ -204,8 +206,8 @@ describe("monitor jobs", () => {
 
     expect(result[0]?.cpu.current).toBeNull();
     expect(result[0]?.ram.current).toBeNull();
-    expect(result[0]?.cpu.history).toEqual([{ timestamp: "2026-05-11T17:15:00.000Z", value: 22 }]);
-    expect(result[0]?.ram.history).toEqual([{ timestamp: "2026-05-11T17:15:00.000Z", value: 35 }]);
+    expect(result[0]?.cpu.history).toEqual([{ timestamp: recentTimestamp, value: 22 }]);
+    expect(result[0]?.ram.history).toEqual([{ timestamp: recentTimestamp, value: 35 }]);
     expect(result[0]?.error).toContain("Glances unavailable");
   });
 });
@@ -285,4 +287,8 @@ async function createTestEnv(overrides: Partial<AppEnv> = {}): Promise<AppEnv> {
     staticDir: path.join(dir, "static"),
     ...overrides
   };
+}
+
+function minutesAgo(minutes: number) {
+  return new Date(Date.now() - minutes * 60 * 1000).toISOString();
 }
