@@ -1,0 +1,14 @@
+.git
+.gitignore
+.superpowers
+.worktrees
+node_modules
+dist
+dist-server
+coverage
+playwright-report
+test-results
+npm-debug.log*
+Dockerfile
+docker-compose*.yml
+docs
