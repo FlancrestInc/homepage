@@ -7,7 +7,7 @@ export const bookmarkHealthSchema = z.object({
   url: z.string().url().optional(),
   method: z.enum(["GET", "HEAD", "POST"]).default("GET"),
   headers: z.record(z.string()).default({}),
-  expectedStatuses: z.array(z.number().int().min(100).max(599)).default([200, 204, 301, 302, 304]),
+  expectedStatuses: z.array(z.number().int().min(100).max(599)).default([200, 204, 301, 302, 304, 401, 403]),
   interval: durationSchema.optional()
 });
 
@@ -15,6 +15,7 @@ export const bookmarkSchema = z.object({
   name: z.string().min(1),
   group: z.string().min(1),
   icon: z.string().min(1),
+  iconColor: z.string().optional(),
   url: z.string().url(),
   health: bookmarkHealthSchema.default({})
 });
@@ -33,7 +34,8 @@ export const appConfigSchema = z.object({
     accentColor: z.string().default("#72a6ff"),
     background: z.object({
       type: z.enum(["color", "image"]).default("color"),
-      value: z.string().default("#1d2a3b")
+      value: z.string().default("#1d2a3b"),
+      style: z.enum(["cover", "contain", "stretch", "tile", "center"]).default("cover")
     }).default({})
   }).default({}),
   layout: z.object({

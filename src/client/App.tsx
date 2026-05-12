@@ -61,10 +61,19 @@ export function App() {
 
   const shellStyle = useMemo(() => {
     if (!snapshot) return undefined;
-    const background = snapshot.theme.background;
+    const mode = resolveThemeMode(snapshot.theme.mode);
+    const palette = mode === "light" ? lightPalette : darkPalette;
     return {
       "--accent-color": snapshot.theme.accentColor,
-      "--page-background": background.type === "image" ? `#1d2a3b url("${background.value}") center / cover fixed` : background.value
+      "--page-background": pageBackground(snapshot.theme.background, palette.pageBackground),
+      "--panel-background": palette.panelBackground,
+      "--panel-border": palette.panelBorder,
+      "--muted-text": palette.mutedText,
+      "--soft-text": palette.softText,
+      "--primary-text": palette.primaryText,
+      "--control-background": palette.controlBackground,
+      "--tooltip-background": palette.tooltipBackground,
+      colorScheme: mode
     } as CSSProperties;
   }, [snapshot]);
 
@@ -110,4 +119,42 @@ function durationToMs(value: string) {
 
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Snapshot request failed";
+}
+
+const darkPalette = {
+  pageBackground: "#1d2a3b",
+  panelBackground: "rgba(12, 20, 32, 0.72)",
+  panelBorder: "rgba(203, 217, 242, 0.14)",
+  mutedText: "#9fb0c9",
+  softText: "#c8d5ea",
+  primaryText: "#f7fbff",
+  controlBackground: "rgba(5, 10, 18, 0.58)",
+  tooltipBackground: "rgba(8, 14, 24, 0.96)"
+};
+
+const lightPalette = {
+  pageBackground: "#edf3fb",
+  panelBackground: "rgba(255, 255, 255, 0.78)",
+  panelBorder: "rgba(69, 85, 112, 0.18)",
+  mutedText: "#58687f",
+  softText: "#314056",
+  primaryText: "#142033",
+  controlBackground: "rgba(255, 255, 255, 0.78)",
+  tooltipBackground: "rgba(20, 32, 51, 0.94)"
+};
+
+function resolveThemeMode(mode: PublicSnapshot["theme"]["mode"]) {
+  if (mode !== "system") return mode;
+  return window.matchMedia?.("(prefers-color-scheme: light)").matches ? "light" : "dark";
+}
+
+function pageBackground(background: PublicSnapshot["theme"]["background"], fallbackColor: string) {
+  if (background.type === "color") return background.value || fallbackColor;
+
+  const image = `url("${background.value}")`;
+  if (background.style === "tile") return `${fallbackColor} ${image} left top / auto repeat fixed`;
+  if (background.style === "contain") return `${fallbackColor} ${image} center / contain no-repeat fixed`;
+  if (background.style === "stretch") return `${fallbackColor} ${image} center / 100% 100% no-repeat fixed`;
+  if (background.style === "center") return `${fallbackColor} ${image} center / auto no-repeat fixed`;
+  return `${fallbackColor} ${image} center / cover no-repeat fixed`;
 }

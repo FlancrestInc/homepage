@@ -7,7 +7,7 @@ import { bookmarkHealthKey, buildPublicSnapshot } from "../../src/server/cache/p
 import type { AppConfig } from "../../src/server/config/schema";
 
 const config: AppConfig = {
-  theme: { mode: "dark", accentColor: "#72a6ff", background: { type: "color", value: "#1d2a3b" } },
+  theme: { mode: "dark", accentColor: "#72a6ff", background: { type: "color", value: "#1d2a3b", style: "cover" } },
   layout: {
     editorButton: "bottom-right",
     groups: [
@@ -18,7 +18,7 @@ const config: AppConfig = {
   },
   bookmarks: [
     { name: "GitHub", group: "Development", icon: "si-github", url: "https://github.com", health: { mode: "default", method: "GET", headers: {}, expectedStatuses: [200] } },
-    { name: "Search", group: "Common", icon: "mdi-magnify", url: "https://google.com", health: { mode: "disabled", method: "GET", headers: {}, expectedStatuses: [200] } },
+    { name: "Search", group: "Common", icon: "mdi-magnify", iconColor: "#ffcc00", url: "https://google.com", health: { mode: "disabled", method: "GET", headers: {}, expectedStatuses: [200] } },
     { name: "Docs", group: "Unconfigured", icon: "mdi-book-open-page-variant", url: "https://docs.example.com", health: { mode: "default", method: "GET", headers: {}, expectedStatuses: [200] } }
   ],
   widgets: {
@@ -46,6 +46,12 @@ describe("buildPublicSnapshot", () => {
       monitors: []
     });
     expect(snapshot.groups[1]?.bookmarks[0]?.status).toBe("down");
+  });
+
+  it("exposes bookmark icon colors in public snapshots", () => {
+    const snapshot = buildPublicSnapshot(config, { health: {}, weather: null, monitors: [] });
+
+    expect(snapshot.groups[0]?.bookmarks[0]?.iconColor).toBe("#ffcc00");
   });
 
   it("uses group, name, and url to attach health for duplicate bookmark names", () => {

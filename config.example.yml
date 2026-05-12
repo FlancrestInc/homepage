@@ -4,6 +4,7 @@ theme:
   background:
     type: color
     value: "#1d2a3b"
+    style: cover
 
 layout:
   editorButton: bottom-right
@@ -19,6 +20,7 @@ bookmarks:
   - name: Grafana
     group: Self-Hosting
     icon: si-grafana
+    iconColor: "#f46800"
     url: https://grafana.example.com
     health:
       mode: default

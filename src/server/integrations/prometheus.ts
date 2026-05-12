@@ -22,7 +22,7 @@ type PrometheusRangeResponse = {
 };
 
 export async function queryPrometheusRange(input: PrometheusRangeInput): Promise<MetricPoint[]> {
-  const url = new URL("/api/v1/query_range", normalizedBaseUrl(input.baseUrl));
+  const url = serviceUrl(input.baseUrl, "api/v1/query_range");
   url.searchParams.set("query", input.query);
   url.searchParams.set("start", String(input.start));
   url.searchParams.set("end", String(input.end));
@@ -74,6 +74,6 @@ function isPrometheusData(value: unknown): value is { result: Array<{ values?: u
   return typeof value === "object" && value !== null && "result" in value && Array.isArray(value.result);
 }
 
-function normalizedBaseUrl(baseUrl: string) {
-  return baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
+function serviceUrl(baseUrl: string, path: string) {
+  return new URL(path, baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`);
 }

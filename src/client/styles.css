@@ -10,6 +10,9 @@
   --panel-border: rgba(203, 217, 242, 0.14);
   --muted-text: #9fb0c9;
   --soft-text: #c8d5ea;
+  --primary-text: #f7fbff;
+  --control-background: rgba(5, 10, 18, 0.58);
+  --tooltip-background: rgba(8, 14, 24, 0.96);
   --status-up: #45d483;
   --status-down: #ff6978;
   --status-unknown: #9ca9ba;
@@ -35,6 +38,7 @@ body {
   grid-template-rows: auto 1fr;
   gap: 14px;
   background: var(--page-background);
+  color: var(--primary-text);
   overflow: hidden;
 }
 
@@ -89,7 +93,7 @@ body {
 
 .date-line,
 .weather-temp {
-  color: #ffffff;
+  color: var(--primary-text);
   font-size: 1.1rem;
   font-weight: 700;
   white-space: nowrap;
@@ -132,7 +136,7 @@ body {
 }
 
 .monitor-name {
-  color: #f7fbff;
+  color: var(--primary-text);
   font-size: 0.86rem;
   font-weight: 700;
   overflow: hidden;
@@ -199,7 +203,7 @@ body {
 
 .bookmark-group h2 {
   margin: 0 0 8px;
-  color: #edf4ff;
+  color: var(--primary-text);
   font-size: 0.84rem;
   font-weight: 800;
   letter-spacing: 0;
@@ -218,7 +222,7 @@ body {
   height: 60px;
   display: grid;
   place-items: center;
-  color: #eff6ff;
+  color: var(--primary-text);
   text-decoration: none;
   background: rgba(238, 244, 255, 0.08);
   border: 1px solid rgba(219, 232, 255, 0.12);
@@ -245,6 +249,12 @@ body {
 
 .bookmark-button.status-down::after {
   background: var(--status-down);
+  animation: status-pulse 1.5s ease-in-out infinite;
+}
+
+.bookmark-button.status-down {
+  border-color: color-mix(in srgb, var(--status-down) 72%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--status-down) 45%, transparent);
 }
 
 .bookmark-button.status-unknown::after {
@@ -260,8 +270,11 @@ body {
 }
 
 .bookmark-icon {
-  max-width: 42px;
+  width: 42px;
+  height: 42px;
   padding: 0 4px;
+  display: grid;
+  place-items: center;
   font-size: 1.35rem;
   font-weight: 800;
   overflow: hidden;
@@ -276,7 +289,7 @@ body {
   max-width: 180px;
   padding: 5px 8px;
   color: #ffffff;
-  background: rgba(8, 14, 24, 0.96);
+  background: var(--tooltip-background);
   border: 1px solid rgba(219, 232, 255, 0.18);
   border-radius: 6px;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
@@ -287,6 +300,17 @@ body {
   transform: translate(-50%, 4px);
   transition: opacity 120ms ease, transform 120ms ease;
   white-space: nowrap;
+}
+
+@keyframes status-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--status-down) 45%, transparent);
+  }
+
+  50% {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--status-down) 0%, transparent);
+  }
 }
 
 .bookmark-button:hover .bookmark-label,
@@ -353,8 +377,8 @@ body {
   height: 100vh;
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr) auto auto;
-  color: #eaf1ff;
-  background: rgba(13, 21, 34, 0.98);
+  color: var(--primary-text);
+  background: color-mix(in srgb, var(--page-background) 82%, black 18%);
   border-left: 1px solid rgba(219, 232, 255, 0.18);
   box-shadow: -18px 0 42px rgba(0, 0, 0, 0.36);
 }
@@ -403,7 +427,7 @@ body {
   height: 34px;
   display: grid;
   place-items: center;
-  color: #eef5ff;
+  color: var(--primary-text);
   background: rgba(238, 244, 255, 0.08);
   border: 1px solid rgba(219, 232, 255, 0.16);
   border-radius: 7px;
@@ -445,7 +469,7 @@ body {
 .drawer-tabs button.active,
 .drawer-tabs button:hover,
 .drawer-tabs button:focus-visible {
-  color: #ffffff;
+  color: var(--primary-text);
   background: rgba(238, 244, 255, 0.1);
   border-color: rgba(219, 232, 255, 0.18);
   outline: none;
@@ -488,7 +512,7 @@ body {
 
 .editor-panel legend {
   padding: 0 4px;
-  color: #ffffff;
+  color: var(--primary-text);
   font-size: 0.82rem;
   font-weight: 700;
 }
@@ -523,7 +547,7 @@ body {
   width: 100%;
   min-width: 0;
   color: #f4f8ff;
-  background: rgba(5, 10, 18, 0.58);
+  background: var(--control-background);
   border: 1px solid rgba(219, 232, 255, 0.16);
   border-radius: 7px;
   font: inherit;
@@ -564,17 +588,33 @@ body {
   height: 48px;
   display: grid;
   place-items: center;
-  color: #f8fbff;
-  background: rgba(5, 10, 18, 0.58);
+  color: var(--primary-text);
+  background: var(--control-background);
   border: 1px solid rgba(219, 232, 255, 0.16);
   border-radius: 7px;
   overflow: hidden;
 }
 
-.icon-preview img {
+.icon-preview img,
+.rendered-icon {
   width: 30px;
   height: 30px;
   object-fit: contain;
+}
+
+.rendered-icon {
+  display: block;
+  color: currentColor;
+}
+
+.icon-text-fallback {
+  max-width: 100%;
+  padding: 0 5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.72rem;
+  font-weight: 800;
 }
 
 .icon-preview span,
@@ -609,7 +649,7 @@ body {
 .icon-mode-tabs button,
 .icon-results-grid button {
   min-width: 0;
-  color: #eef5ff;
+  color: var(--primary-text);
   background: rgba(238, 244, 255, 0.08);
   border: 1px solid rgba(219, 232, 255, 0.16);
   border-radius: 7px;
@@ -672,7 +712,7 @@ body {
 }
 
 .icon-result-preview {
-  color: #ffffff;
+  color: var(--primary-text);
   font-size: 0.72rem;
   font-weight: 800;
 }
@@ -687,7 +727,7 @@ body {
 
 .icon-result-name {
   align-self: center;
-  color: #f3f7ff;
+  color: var(--primary-text);
   font-size: 0.76rem;
   font-weight: 800;
 }

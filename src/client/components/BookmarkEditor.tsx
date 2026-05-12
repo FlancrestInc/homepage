@@ -11,12 +11,13 @@ const defaultBookmark: BookmarkConfig = {
   name: "New bookmark",
   group: "General",
   icon: "link",
+  iconColor: "#eef5ff",
   url: "https://example.com",
   health: {
     mode: "default",
     method: "GET",
     headers: {},
-    expectedStatuses: [200, 204, 301, 302, 304]
+    expectedStatuses: [200, 204, 301, 302, 304, 401, 403]
   }
 };
 
@@ -88,7 +89,12 @@ export function BookmarkEditor({ config, onChange }: BookmarkEditorProps) {
               <input value={bookmark.url} onChange={(event) => updateBookmark(index, { ...bookmark, url: event.target.value })} />
             </label>
             <div className="form-grid-span">
-              <IconPicker value={bookmark.icon} onChange={(icon) => updateBookmark(index, { ...bookmark, icon })} />
+              <IconPicker
+                value={bookmark.icon}
+                color={bookmark.iconColor}
+                onChange={(icon) => updateBookmark(index, { ...bookmark, icon })}
+                onColorChange={(iconColor) => updateBookmark(index, { ...bookmark, iconColor })}
+              />
             </div>
             <label>
               Health mode

@@ -75,6 +75,21 @@ describe("health checks", () => {
     });
     expect(result[bookmarkHealthKey(bookmark)]?.status).toBe("up");
   });
+
+  it("treats protected responses as up when configured as expected", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ status: 403 });
+    const bookmark: Bookmark = {
+      name: "ChatGPT",
+      group: "Common",
+      icon: "si-openai",
+      url: "https://chatgpt.com",
+      health: { mode: "default", method: "GET", headers: {}, expectedStatuses: [200, 204, 301, 302, 304, 401, 403] }
+    };
+
+    const result = await refreshHealthChecks({ bookmarks: [bookmark], timeout: 1000, fetchImpl: fetchMock });
+
+    expect(result[bookmarkHealthKey(bookmark)]?.status).toBe("up");
+  });
 });
 
 describe("prometheus integration", () => {
@@ -95,6 +110,24 @@ describe("prometheus integration", () => {
 
     expect(points).toEqual([{ timestamp: "2026-05-11T17:20:00.000Z", value: 42.5 }]);
     expect(fetchMock).toHaveBeenCalledWith(expect.any(URL), { signal: expect.any(AbortSignal) });
+  });
+
+  it("preserves Prometheus base URL paths when building query URLs", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ status: "success", data: { result: [] } })
+    });
+
+    await queryPrometheusRange({
+      baseUrl: "http://nas:9090/prometheus",
+      query: "up",
+      start: 1778520000,
+      end: 1778520300,
+      step: "5m",
+      fetchImpl: fetchMock
+    });
+
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("http://nas:9090/prometheus/api/v1/query_range");
   });
 
   it("returns an empty array for empty Prometheus results", async () => {
@@ -213,6 +246,21 @@ describe("monitor jobs", () => {
 });
 
 describe("glances integration", () => {
+  it("falls back from Glances API v3 to v4 when v3 endpoints are not found", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: false, status: 404, json: async () => ({}) })
+      .mockResolvedValueOnce({ ok: false, status: 404, json: async () => ({}) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ total: 33 }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ percent: 44 }) });
+
+    await expect(queryGlancesCurrent({ baseUrl: "http://nas:61208", fetchImpl: fetchMock })).resolves.toEqual({
+      cpuPercent: 33,
+      ramPercent: 44
+    });
+    expect(String(fetchMock.mock.calls[2]?.[0])).toContain("http://nas:61208/api/4/cpu");
+  });
+
   it("throws on missing or non-finite numeric values", async () => {
     const fetchMock = vi
       .fn()

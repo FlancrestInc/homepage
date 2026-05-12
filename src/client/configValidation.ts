@@ -54,7 +54,8 @@ function validateTheme(value: Record<string, unknown>) {
     requireString(theme, "theme.mode") ??
     requireString(theme, "theme.accentColor") ??
     requireString(background, "theme.background.type") ??
-    requireString(background, "theme.background.value")
+    requireString(background, "theme.background.value") ??
+    optionalString(background, "theme.background.style")
   );
 }
 
@@ -92,6 +93,7 @@ function validateBookmarks(value: Record<string, unknown>) {
       requireString(bookmark, `${path}.name`) ??
       requireString(bookmark, `${path}.group`) ??
       requireString(bookmark, `${path}.icon`) ??
+      optionalString(bookmark, `${path}.iconColor`) ??
       requireString(bookmark, `${path}.url`);
     if (bookmarkError) return bookmarkError;
 

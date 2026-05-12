@@ -58,6 +58,7 @@ function publicBookmark(bookmark: Bookmark, health?: CachedHealth[string]) {
     name: bookmark.name,
     group: bookmark.group,
     icon: bookmark.icon,
+    iconColor: bookmark.iconColor,
     url: bookmark.url,
     healthMode: bookmark.health.mode,
     status: health?.status ?? "unknown",

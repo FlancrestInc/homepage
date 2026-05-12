@@ -59,7 +59,8 @@ const minimalConfig: AppConfig = {
     accentColor: "#72a6ff",
     background: {
       type: "color",
-      value: "#1d2a3b"
+      value: "#1d2a3b",
+      style: "cover"
     }
   },
   layout: {

@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { IconGlyph } from "../icons";
 import type { PublicBookmarkGroup } from "../types";
 
 type BookmarkGridProps = {
@@ -21,7 +22,7 @@ export function BookmarkGrid({ groups }: BookmarkGridProps) {
                 title={bookmark.name}
               >
                 <span className="bookmark-icon" aria-hidden="true">
-                  {bookmark.icon}
+                  <IconGlyph value={bookmark.icon} color={bookmark.iconColor} />
                 </span>
                 <span className="bookmark-label">{bookmark.name}</span>
               </a>

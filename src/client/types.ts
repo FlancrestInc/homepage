@@ -6,6 +6,7 @@ export type ThemeConfig = {
   background: {
     type: "color" | "image";
     value: string;
+    style: "cover" | "contain" | "stretch" | "tile" | "center";
   };
 };
 
@@ -50,6 +51,7 @@ export type PublicBookmark = {
   name: string;
   group: string;
   icon: string;
+  iconColor?: string;
   url: string;
   healthMode: "default" | "custom" | "disabled";
   status: HealthStatus;
@@ -93,6 +95,7 @@ export type BookmarkConfig = {
   name: string;
   group: string;
   icon: string;
+  iconColor?: string;
   url: string;
   health: BookmarkHealthConfig;
 };
