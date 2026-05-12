@@ -46,8 +46,8 @@ const mdiIconIndex = mdiAliases
   }));
 
 export async function registerIconRoutes(app: FastifyInstance) {
-  app.get<{ Querystring: { q?: string } }>("/api/icons", async (request) => {
-    const query = normalize(request.query.q ?? "");
+  app.get<{ Querystring: { q?: string | string[] } }>("/api/icons", async (request) => {
+    const query = normalize(firstQueryValue(request.query.q));
     if (!query) return { icons: [] };
 
     return {
@@ -68,6 +68,11 @@ function isSimpleIcon(value: unknown): value is SimpleIcon {
 
 function normalize(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function firstQueryValue(value: string | string[] | undefined) {
+  if (Array.isArray(value)) return value[0] ?? "";
+  return value ?? "";
 }
 
 function sortIconResults(query: string) {

@@ -26,8 +26,8 @@ export async function saveConfig(config: AppConfig): Promise<AppConfig> {
   return response.json() as Promise<AppConfig>;
 }
 
-export async function searchIcons(query: string): Promise<IconSearchResult[]> {
-  const response = await fetch(`/api/icons?q=${encodeURIComponent(query)}`);
+export async function searchIcons(query: string, signal?: AbortSignal): Promise<IconSearchResult[]> {
+  const response = await fetch(`/api/icons?q=${encodeURIComponent(query)}`, signal ? { signal } : undefined);
   if (!response.ok) throw new Error(await responseErrorMessage(response, "Icon search failed"));
   const body = (await response.json()) as { icons?: IconSearchResult[] };
   return Array.isArray(body.icons) ? body.icons : [];

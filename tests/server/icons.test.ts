@@ -28,6 +28,15 @@ async function withTestApp<T>(callback: (app: FastifyInstance) => Promise<T>) {
 }
 
 describe("icon routes", () => {
+  it("returns no icons for empty searches", async () => {
+    await withTestApp(async (app) => {
+      const response = await app.inject({ method: "GET", url: "/api/icons?q=" });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toEqual({ icons: [] });
+    });
+  });
+
   it("returns Simple Icons and MDI-style matches for icon search", async () => {
     await withTestApp(async (app) => {
       const response = await app.inject({ method: "GET", url: "/api/icons?q=grafana" });
@@ -63,6 +72,32 @@ describe("icon routes", () => {
           expect.objectContaining({ name: "GitHub", value: "mdi-github", source: "mdi" })
         ])
       );
+    });
+  });
+
+  it("uses the first search term when duplicate query parameters are provided", async () => {
+    await withTestApp(async (app) => {
+      const response = await app.inject({ method: "GET", url: "/api/icons?q=grafana&q=github" });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().icons).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            name: "Grafana",
+            value: "si-grafana",
+            source: "simple-icons"
+          })
+        ])
+      );
+    });
+  });
+
+  it("limits icon search results", async () => {
+    await withTestApp(async (app) => {
+      const response = await app.inject({ method: "GET", url: "/api/icons?q=a" });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().icons).toHaveLength(36);
     });
   });
 });

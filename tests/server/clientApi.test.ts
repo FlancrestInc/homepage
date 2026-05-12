@@ -1,5 +1,5 @@
 import { afterEach, expect, test, vi } from "vitest";
-import { getConfig, saveConfig } from "../../src/client/api";
+import { getConfig, saveConfig, searchIcons } from "../../src/client/api";
 import type { AppConfig } from "../../src/client/types";
 
 afterEach(() => {
@@ -39,6 +39,18 @@ test("getConfig includes validation issue details from failed responses", async 
   );
 
   await expect(getConfig()).rejects.toThrow("Config request failed: 400 - invalid_config: theme.mode: Invalid option");
+});
+
+test("searchIcons passes abort signals to fetch", async () => {
+  const controller = new AbortController();
+  const fetch = vi.fn(async () => {
+    return new Response(JSON.stringify({ icons: [] }), { status: 200, headers: { "content-type": "application/json" } });
+  });
+  vi.stubGlobal("fetch", fetch);
+
+  await searchIcons("grafana", controller.signal);
+
+  expect(fetch).toHaveBeenCalledWith("/api/icons?q=grafana", { signal: controller.signal });
 });
 
 const minimalConfig: AppConfig = {

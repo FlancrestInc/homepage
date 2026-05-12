@@ -14,7 +14,12 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<IconSearchResult[]>([]);
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
-  const mode = useMemo(() => iconMode(value), [value]);
+  const inferredMode = useMemo(() => iconMode(value), [value]);
+  const [mode, setMode] = useState<IconMode>(inferredMode);
+
+  useEffect(() => {
+    if (value) setMode(inferredMode);
+  }, [inferredMode, value]);
 
   useEffect(() => {
     const trimmedQuery = query.trim();
@@ -27,7 +32,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
     const controller = new AbortController();
     setStatus("loading");
     const timeout = window.setTimeout(() => {
-      searchIcons(trimmedQuery)
+      searchIcons(trimmedQuery, controller.signal)
         .then((icons) => {
           if (!controller.signal.aborted) {
             setResults(icons);
@@ -49,9 +54,11 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
   }, [query]);
 
   function updateMode(nextMode: IconMode) {
-    if (nextMode === "url" && !isUrlIcon(value)) onChange("https://");
-    if (nextMode === "local" && !isLocalIcon(value)) onChange("/");
-    if (nextMode === "catalog" && (isUrlIcon(value) || isLocalIcon(value))) onChange("link");
+    setMode(nextMode);
+    if (value) return;
+    if (nextMode === "url") onChange("https://");
+    if (nextMode === "local") onChange("/");
+    if (nextMode === "catalog") onChange("link");
   }
 
   return (
@@ -83,12 +90,18 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
 
       <label className="icon-search-field">
         <Search aria-hidden="true" size={15} />
-        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search icons" />
+        <input aria-label="Search icons" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search icons" />
       </label>
 
       <div className="icon-results-grid" aria-label="Icon search results">
         {results.map((icon) => (
-          <button key={`${icon.source}:${icon.value}`} type="button" className={value === icon.value ? "active" : ""} onClick={() => onChange(icon.value)}>
+          <button
+            key={`${icon.source}:${icon.value}`}
+            type="button"
+            className={value === icon.value ? "active" : ""}
+            aria-label={`Select ${icon.name} from ${icon.source === "simple-icons" ? "Simple Icons" : "MDI"}`}
+            onClick={() => onChange(icon.value)}
+          >
             <span className="icon-result-preview">{icon.value}</span>
             <span className="icon-result-name">{icon.name}</span>
             <span className="icon-result-source">{icon.source === "simple-icons" ? "Simple Icons" : "MDI"}</span>
