@@ -97,6 +97,12 @@ export type BookmarkConfig = {
   health: BookmarkHealthConfig;
 };
 
+export type IconSearchResult = {
+  name: string;
+  value: string;
+  source: "simple-icons" | "mdi";
+};
+
 export type BookmarkGroupConfig = {
   name: string;
   order: number;

@@ -5,6 +5,7 @@ import { pathToFileURL } from "node:url";
 import { readEnv, type AppEnv } from "./env.js";
 import { startScheduler } from "./jobs/scheduler.js";
 import { registerConfigRoutes } from "./routes/config.js";
+import { registerIconRoutes } from "./routes/icons.js";
 import { registerPublicRoutes } from "./routes/public.js";
 
 export type BuildOptions = {
@@ -17,6 +18,7 @@ export async function buildApp(env: AppEnv, options: BuildOptions = {}): Promise
 
   app.get("/api/health", async () => ({ ok: true }));
   await registerConfigRoutes(app, env);
+  await registerIconRoutes(app);
   await registerPublicRoutes(app, env);
 
   if (options.serveStatic ?? true) {

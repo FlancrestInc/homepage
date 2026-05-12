@@ -1,5 +1,6 @@
 import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
 import type { AppConfig, BookmarkConfig, BookmarkGroupConfig } from "../types";
+import { IconPicker } from "./IconPicker";
 
 type BookmarkEditorProps = {
   config: AppConfig;
@@ -86,10 +87,9 @@ export function BookmarkEditor({ config, onChange }: BookmarkEditorProps) {
               Link
               <input value={bookmark.url} onChange={(event) => updateBookmark(index, { ...bookmark, url: event.target.value })} />
             </label>
-            <label>
-              Icon
-              <input value={bookmark.icon} onChange={(event) => updateBookmark(index, { ...bookmark, icon: event.target.value })} />
-            </label>
+            <div className="form-grid-span">
+              <IconPicker value={bookmark.icon} onChange={(icon) => updateBookmark(index, { ...bookmark, icon })} />
+            </div>
             <label>
               Health mode
               <select value={bookmark.health.mode} onChange={(event) => updateBookmark(index, { ...bookmark, health: { ...bookmark.health, mode: event.target.value as BookmarkConfig["health"]["mode"] } })}>
