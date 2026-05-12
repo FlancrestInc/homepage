@@ -71,7 +71,7 @@ export function BookmarkEditor({ config, onChange }: BookmarkEditorProps) {
       </div>
 
       {bookmarks.map((bookmark, index) => (
-        <fieldset className="editor-panel" key={`${bookmark.name}-${index}`}>
+        <fieldset className="editor-panel" key={index}>
           <legend>{bookmark.name || `Bookmark ${index + 1}`}</legend>
           <div className="form-grid compact-form-grid">
             <label>
@@ -147,7 +147,7 @@ export function BookmarkEditor({ config, onChange }: BookmarkEditorProps) {
         </button>
       </div>
       {groups.map((group, index) => (
-        <fieldset className="editor-panel" key={`${group.name}-${index}`}>
+        <fieldset className="editor-panel" key={index}>
           <legend>{group.name || `Group ${index + 1}`}</legend>
           <div className="form-grid compact-form-grid">
             <label>

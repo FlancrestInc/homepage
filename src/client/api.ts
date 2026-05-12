@@ -12,7 +12,7 @@ export async function getPublicSnapshot(): Promise<PublicSnapshot> {
 
 export async function getConfig(): Promise<AppConfig> {
   const response = await fetch("/api/config");
-  if (!response.ok) throw new Error(`Config request failed: ${response.status}`);
+  if (!response.ok) throw new Error(await responseErrorMessage(response, "Config request failed"));
   return response.json() as Promise<AppConfig>;
 }
 

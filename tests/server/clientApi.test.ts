@@ -1,5 +1,5 @@
 import { afterEach, expect, test, vi } from "vitest";
-import { saveConfig } from "../../src/client/api";
+import { getConfig, saveConfig } from "../../src/client/api";
 import type { AppConfig } from "../../src/client/types";
 
 afterEach(() => {
@@ -22,6 +22,23 @@ test("saveConfig includes validation issue details from failed responses", async
   );
 
   await expect(saveConfig(minimalConfig)).rejects.toThrow("Config save failed: 400 - invalid_config: bookmarks.0.url: Invalid url");
+});
+
+test("getConfig includes validation issue details from failed responses", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => {
+      return new Response(
+        JSON.stringify({
+          error: "invalid_config",
+          issues: [{ path: ["theme", "mode"], message: "Invalid option" }]
+        }),
+        { status: 400, headers: { "content-type": "application/json" } }
+      );
+    })
+  );
+
+  await expect(getConfig()).rejects.toThrow("Config request failed: 400 - invalid_config: theme.mode: Invalid option");
 });
 
 const minimalConfig: AppConfig = {

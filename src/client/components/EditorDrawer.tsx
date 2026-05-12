@@ -29,6 +29,7 @@ export function EditorDrawer({ open, onClose, onSaved }: EditorDrawerProps) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [rawError, setRawError] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -37,6 +38,7 @@ export function EditorDrawer({ open, onClose, onSaved }: EditorDrawerProps) {
     let cancelled = false;
     setLoading(true);
     setError(null);
+    setRawError(null);
     setActiveTab("bookmarks");
 
     async function loadEditableConfig() {
@@ -93,7 +95,7 @@ export function EditorDrawer({ open, onClose, onSaved }: EditorDrawerProps) {
     return (
       <label className="raw-config-label">
         Raw configuration
-        <textarea value={rawConfig} onChange={(event) => setRawConfig(event.target.value)} spellCheck={false} />
+        <textarea value={rawConfig} onChange={(event) => handleRawConfigChange(event.target.value)} spellCheck={false} />
       </label>
     );
   }, [activeTab, draft, rawConfig]);
@@ -102,23 +104,28 @@ export function EditorDrawer({ open, onClose, onSaved }: EditorDrawerProps) {
 
   function handleDraftChange(nextDraft: AppConfig) {
     setDraft(nextDraft);
+    setRawError(null);
     if (activeTab !== "raw") {
       setRawConfig(formatConfig(nextDraft));
     }
   }
 
+  function handleRawConfigChange(value: string) {
+    setRawConfig(value);
+    try {
+      setDraft(JSON.parse(value) as AppConfig);
+      setRawError(null);
+      setError(null);
+    } catch (parseError) {
+      setRawError(`Raw config is not valid JSON: ${errorMessage(parseError)}`);
+    }
+  }
+
   async function handleSave() {
     if (!draft) return;
+    if (rawError) return;
 
-    let nextConfig = draft;
-    if (activeTab === "raw") {
-      try {
-        nextConfig = JSON.parse(rawConfig) as AppConfig;
-      } catch (parseError) {
-        setError(`Raw config is not valid JSON: ${errorMessage(parseError)}`);
-        return;
-      }
-    }
+    const nextConfig = draft;
 
     setSaving(true);
     setError(null);
@@ -181,10 +188,10 @@ export function EditorDrawer({ open, onClose, onSaved }: EditorDrawerProps) {
           {loading ? <p className="drawer-state">Loading configuration</p> : tabPanel}
         </section>
 
-        {error ? (
+        {rawError || error ? (
           <p className="editor-error" role="alert">
             <AlertCircle aria-hidden="true" size={16} />
-            <span>{error}</span>
+            <span>{rawError ?? error}</span>
           </p>
         ) : null}
 
@@ -192,7 +199,7 @@ export function EditorDrawer({ open, onClose, onSaved }: EditorDrawerProps) {
           <button className="secondary-button" type="button" onClick={onClose}>
             Cancel
           </button>
-          <button className="primary-button" type="button" onClick={handleSave} disabled={!draft || loading || saving}>
+          <button className="primary-button" type="button" onClick={handleSave} disabled={!draft || Boolean(rawError) || loading || saving}>
             {saving ? <Check aria-hidden="true" size={16} /> : <Save aria-hidden="true" size={16} />}
             <span>{saving ? "Saving" : "Save"}</span>
           </button>

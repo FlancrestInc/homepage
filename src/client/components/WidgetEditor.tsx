@@ -156,7 +156,7 @@ export function WidgetEditor({ config, onChange }: WidgetEditorProps) {
       </div>
 
       {monitors.servers.map((server, index) => (
-        <fieldset className="editor-panel" key={`${server.name}-${index}`}>
+        <fieldset className="editor-panel" key={index}>
           <legend>{server.name || `Server ${index + 1}`}</legend>
           <div className="form-grid compact-form-grid">
             <label className="checkbox-row">
