@@ -82,6 +82,12 @@ export function WidgetEditor({ config, onChange }: WidgetEditorProps) {
             Enabled
           </label>
           <label>
+            Provider
+            <select value={widgets.weather.provider} onChange={(event) => updateWidgets({ ...widgets, weather: { ...widgets.weather, provider: event.target.value as AppConfig["widgets"]["weather"]["provider"] } })}>
+              <option value="open-meteo">Open-Meteo</option>
+            </select>
+          </label>
+          <label>
             Location
             <input value={widgets.weather.location} onChange={(event) => updateWidgets({ ...widgets, weather: { ...widgets.weather, location: event.target.value } })} />
           </label>
