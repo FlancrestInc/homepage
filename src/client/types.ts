@@ -79,3 +79,75 @@ export type PublicSnapshot = {
   };
   groups: PublicBookmarkGroup[];
 };
+
+export type BookmarkHealthConfig = {
+  mode: "default" | "custom" | "disabled";
+  url?: string;
+  method: "GET" | "HEAD" | "POST";
+  headers: Record<string, string>;
+  expectedStatuses: number[];
+  interval?: string;
+};
+
+export type BookmarkConfig = {
+  name: string;
+  group: string;
+  icon: string;
+  url: string;
+  health: BookmarkHealthConfig;
+};
+
+export type BookmarkGroupConfig = {
+  name: string;
+  order: number;
+  columns?: number;
+  width?: "compact" | "normal" | "wide";
+  row?: number;
+};
+
+export type WeatherWidgetConfig = {
+  enabled: boolean;
+  provider: "open-meteo";
+  location: string;
+  latitude?: number;
+  longitude?: number;
+  units: "imperial" | "metric";
+  refreshInterval: string;
+};
+
+export type MonitorServerConfig = {
+  name: string;
+  source?: "prometheus" | "glances";
+  enabled: boolean;
+  cpuQuery?: string;
+  ramQuery?: string;
+  glancesUrl?: string;
+};
+
+export type MonitorWidgetConfig = {
+  source: "prometheus" | "glances";
+  prometheusUrl?: string;
+  historyWindow: string;
+  sampleInterval: string;
+  refreshInterval: string;
+  servers: MonitorServerConfig[];
+};
+
+export type AppConfig = {
+  theme: ThemeConfig;
+  layout: {
+    editorButton: "bottom-right" | "bottom-left";
+    groups: BookmarkGroupConfig[];
+  };
+  bookmarks: BookmarkConfig[];
+  widgets: {
+    refreshInterval: string;
+    time: TimeWidgetConfig;
+    weather: WeatherWidgetConfig;
+    monitors: MonitorWidgetConfig;
+  };
+  healthChecks: {
+    defaultInterval: string;
+    timeout: string;
+  };
+};

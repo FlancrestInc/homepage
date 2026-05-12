@@ -3,12 +3,14 @@ import type { CSSProperties } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { getPublicSnapshot } from "./api";
 import { BookmarkGrid } from "./components/BookmarkGrid";
+import { EditorDrawer } from "./components/EditorDrawer";
 import { WidgetBand } from "./components/WidgetBand";
 import type { PublicSnapshot } from "./types";
 
 export function App() {
   const [snapshot, setSnapshot] = useState<PublicSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -84,11 +86,18 @@ export function App() {
       />
       <BookmarkGrid groups={snapshot.groups} />
       {error ? <p className="refresh-error">Refresh failed: {error}</p> : null}
-      <button className={`settings-button ${snapshot.layout.editorButton}`} type="button" aria-label="Open settings">
+      <button className={`settings-button ${snapshot.layout.editorButton}`} type="button" aria-label="Open settings" onClick={() => setEditorOpen(true)}>
         <Settings aria-hidden="true" size={18} strokeWidth={2} />
       </button>
+      <EditorDrawer open={editorOpen} onClose={() => setEditorOpen(false)} onSaved={reloadSnapshot} />
     </main>
   );
+
+  async function reloadSnapshot() {
+    const nextSnapshot = await getPublicSnapshot();
+    setSnapshot(nextSnapshot);
+    setError(null);
+  }
 }
 
 function durationToMs(value: string) {

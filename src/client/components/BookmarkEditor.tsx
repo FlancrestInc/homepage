@@ -1,0 +1,228 @@
+import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
+import type { AppConfig, BookmarkConfig, BookmarkGroupConfig } from "../types";
+
+type BookmarkEditorProps = {
+  config: AppConfig;
+  onChange: (config: AppConfig) => void;
+};
+
+const defaultBookmark: BookmarkConfig = {
+  name: "New bookmark",
+  group: "General",
+  icon: "link",
+  url: "https://example.com",
+  health: {
+    mode: "default",
+    method: "GET",
+    headers: {},
+    expectedStatuses: [200, 204, 301, 302, 304]
+  }
+};
+
+const defaultGroup: BookmarkGroupConfig = {
+  name: "General",
+  order: 0,
+  columns: 4,
+  width: "normal"
+};
+
+export function BookmarkEditor({ config, onChange }: BookmarkEditorProps) {
+  const groups = config.layout.groups;
+  const bookmarks = config.bookmarks;
+  const groupNames = Array.from(new Set([...groups.map((group) => group.name), ...bookmarks.map((bookmark) => bookmark.group)]));
+
+  function updateBookmark(index: number, nextBookmark: BookmarkConfig) {
+    onChange({ ...config, bookmarks: bookmarks.map((bookmark, bookmarkIndex) => (bookmarkIndex === index ? nextBookmark : bookmark)) });
+  }
+
+  function updateGroup(index: number, nextGroup: BookmarkGroupConfig) {
+    onChange({
+      ...config,
+      layout: {
+        ...config.layout,
+        groups: groups.map((group, groupIndex) => (groupIndex === index ? nextGroup : group))
+      }
+    });
+  }
+
+  function addBookmark() {
+    const group = groupNames[0] ?? "General";
+    onChange({ ...config, bookmarks: [...bookmarks, { ...defaultBookmark, group }] });
+  }
+
+  function addGroup() {
+    onChange({
+      ...config,
+      layout: {
+        ...config.layout,
+        groups: [...groups, { ...defaultGroup, name: uniqueGroupName(groupNames), order: groups.length }]
+      }
+    });
+  }
+
+  return (
+    <div className="editor-stack">
+      <div className="editor-section-header">
+        <h3>Bookmarks</h3>
+        <button className="icon-text-button" type="button" onClick={addBookmark} aria-label="Add bookmark">
+          <Plus aria-hidden="true" size={16} />
+          <span>Add</span>
+        </button>
+      </div>
+
+      {bookmarks.map((bookmark, index) => (
+        <fieldset className="editor-panel" key={`${bookmark.name}-${index}`}>
+          <legend>{bookmark.name || `Bookmark ${index + 1}`}</legend>
+          <div className="form-grid compact-form-grid">
+            <label>
+              Name
+              <input value={bookmark.name} onChange={(event) => updateBookmark(index, { ...bookmark, name: event.target.value })} />
+            </label>
+            <label>
+              Group
+              <input list="bookmark-groups" value={bookmark.group} onChange={(event) => updateBookmark(index, { ...bookmark, group: event.target.value })} />
+            </label>
+            <label>
+              Link
+              <input value={bookmark.url} onChange={(event) => updateBookmark(index, { ...bookmark, url: event.target.value })} />
+            </label>
+            <label>
+              Icon
+              <input value={bookmark.icon} onChange={(event) => updateBookmark(index, { ...bookmark, icon: event.target.value })} />
+            </label>
+            <label>
+              Health mode
+              <select value={bookmark.health.mode} onChange={(event) => updateBookmark(index, { ...bookmark, health: { ...bookmark.health, mode: event.target.value as BookmarkConfig["health"]["mode"] } })}>
+                <option value="default">Default</option>
+                <option value="custom">Custom</option>
+                <option value="disabled">Disabled</option>
+              </select>
+            </label>
+            <label>
+              Health URL
+              <input value={bookmark.health.url ?? ""} onChange={(event) => updateBookmark(index, { ...bookmark, health: { ...bookmark.health, url: optionalText(event.target.value) } })} />
+            </label>
+            <label>
+              Method
+              <select value={bookmark.health.method} onChange={(event) => updateBookmark(index, { ...bookmark, health: { ...bookmark.health, method: event.target.value as BookmarkConfig["health"]["method"] } })}>
+                <option value="GET">GET</option>
+                <option value="HEAD">HEAD</option>
+                <option value="POST">POST</option>
+              </select>
+            </label>
+            <label>
+              Expected statuses
+              <input value={bookmark.health.expectedStatuses.join(", ")} onChange={(event) => updateBookmark(index, { ...bookmark, health: { ...bookmark.health, expectedStatuses: parseStatuses(event.target.value) } })} />
+            </label>
+            <label>
+              Interval override
+              <input value={bookmark.health.interval ?? ""} onChange={(event) => updateBookmark(index, { ...bookmark, health: { ...bookmark.health, interval: optionalText(event.target.value) } })} placeholder="5m" />
+            </label>
+          </div>
+          <div className="row-actions" aria-label={`${bookmark.name || "Bookmark"} actions`}>
+            <button type="button" onClick={() => onChange({ ...config, bookmarks: moveItem(bookmarks, index, index - 1) })} disabled={index === 0} aria-label="Move bookmark up">
+              <ArrowUp aria-hidden="true" size={16} />
+            </button>
+            <button type="button" onClick={() => onChange({ ...config, bookmarks: moveItem(bookmarks, index, index + 1) })} disabled={index === bookmarks.length - 1} aria-label="Move bookmark down">
+              <ArrowDown aria-hidden="true" size={16} />
+            </button>
+            <button type="button" onClick={() => onChange({ ...config, bookmarks: bookmarks.filter((_, bookmarkIndex) => bookmarkIndex !== index) })} aria-label="Delete bookmark">
+              <Trash2 aria-hidden="true" size={16} />
+            </button>
+          </div>
+        </fieldset>
+      ))}
+
+      <datalist id="bookmark-groups">
+        {groupNames.map((name) => (
+          <option key={name} value={name} />
+        ))}
+      </datalist>
+
+      <div className="editor-section-header">
+        <h3>Groups</h3>
+        <button className="icon-text-button" type="button" onClick={addGroup} aria-label="Add group">
+          <Plus aria-hidden="true" size={16} />
+          <span>Add</span>
+        </button>
+      </div>
+      {groups.map((group, index) => (
+        <fieldset className="editor-panel" key={`${group.name}-${index}`}>
+          <legend>{group.name || `Group ${index + 1}`}</legend>
+          <div className="form-grid compact-form-grid">
+            <label>
+              Name
+              <input value={group.name} onChange={(event) => updateGroup(index, { ...group, name: event.target.value })} />
+            </label>
+            <label>
+              Order
+              <input type="number" value={group.order} onChange={(event) => updateGroup(index, { ...group, order: Number(event.target.value) })} />
+            </label>
+            <label>
+              Columns
+              <input type="number" min="1" max="8" value={group.columns ?? ""} onChange={(event) => updateGroup(index, { ...group, columns: optionalNumber(event.target.value) })} />
+            </label>
+            <label>
+              Width
+              <select value={group.width ?? ""} onChange={(event) => updateGroup(index, { ...group, width: optionalText(event.target.value) as BookmarkGroupConfig["width"] })}>
+                <option value="">Default</option>
+                <option value="compact">Compact</option>
+                <option value="normal">Normal</option>
+                <option value="wide">Wide</option>
+              </select>
+            </label>
+            <label>
+              Row
+              <input type="number" min="1" value={group.row ?? ""} onChange={(event) => updateGroup(index, { ...group, row: optionalNumber(event.target.value) })} />
+            </label>
+          </div>
+          <div className="row-actions" aria-label={`${group.name || "Group"} actions`}>
+            <button type="button" onClick={() => onChange({ ...config, layout: { ...config.layout, groups: moveItem(groups, index, index - 1) } })} disabled={index === 0} aria-label="Move group up">
+              <ArrowUp aria-hidden="true" size={16} />
+            </button>
+            <button type="button" onClick={() => onChange({ ...config, layout: { ...config.layout, groups: moveItem(groups, index, index + 1) } })} disabled={index === groups.length - 1} aria-label="Move group down">
+              <ArrowDown aria-hidden="true" size={16} />
+            </button>
+            <button type="button" onClick={() => onChange({ ...config, layout: { ...config.layout, groups: groups.filter((_, groupIndex) => groupIndex !== index) } })} aria-label="Delete group">
+              <Trash2 aria-hidden="true" size={16} />
+            </button>
+          </div>
+        </fieldset>
+      ))}
+    </div>
+  );
+}
+
+function optionalText(value: string) {
+  return value.trim() ? value : undefined;
+}
+
+function optionalNumber(value: string) {
+  return value === "" ? undefined : Number(value);
+}
+
+function parseStatuses(value: string) {
+  const statuses = value
+    .split(",")
+    .map((item) => Number(item.trim()))
+    .filter((status) => Number.isInteger(status));
+  return statuses.length ? statuses : [];
+}
+
+function moveItem<T>(items: T[], from: number, to: number) {
+  if (to < 0 || to >= items.length) return items;
+  const nextItems = [...items];
+  const [item] = nextItems.splice(from, 1);
+  nextItems.splice(to, 0, item);
+  return nextItems;
+}
+
+function uniqueGroupName(existingNames: string[]) {
+  let index = 1;
+  let name = "General";
+  while (existingNames.includes(name)) {
+    index += 1;
+    name = `Group ${index}`;
+  }
+  return name;
+}
