@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import type { CachedWeather, MetricPoint, MonitorCard, TimeWidgetConfig } from "../types";
 
 type WidgetBandProps = {
@@ -8,7 +9,7 @@ type WidgetBandProps = {
 };
 
 export function WidgetBand({ generatedAt, time, weather, monitors }: WidgetBandProps) {
-  const now = new Date();
+  const now = useClock(time.enabled, time.showSeconds);
 
   return (
     <section className="widget-band" aria-label="Status widgets">
@@ -32,6 +33,22 @@ export function WidgetBand({ generatedAt, time, weather, monitors }: WidgetBandP
       </div>
     </section>
   );
+}
+
+function useClock(enabled: boolean, showSeconds: boolean) {
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    if (!enabled) return undefined;
+
+    const intervalId = window.setInterval(() => {
+      setNow(new Date());
+    }, showSeconds ? 1000 : 60000);
+
+    return () => window.clearInterval(intervalId);
+  }, [enabled, showSeconds]);
+
+  return now;
 }
 
 function WeatherWidget({ weather }: { weather: CachedWeather | null }) {

@@ -12,7 +12,6 @@ export function App() {
 
   useEffect(() => {
     let cancelled = false;
-    let intervalId: number | undefined;
 
     async function loadInitialSnapshot() {
       try {
@@ -20,20 +19,6 @@ export function App() {
         if (cancelled) return;
         setSnapshot(nextSnapshot);
         setError(null);
-
-        intervalId = window.setInterval(async () => {
-          try {
-            const refreshedSnapshot = await getPublicSnapshot();
-            if (!cancelled) {
-              setSnapshot(refreshedSnapshot);
-              setError(null);
-            }
-          } catch (refreshError) {
-            if (!cancelled) {
-              setError(errorMessage(refreshError));
-            }
-          }
-        }, durationToMs(nextSnapshot.widgets.refreshInterval));
       } catch (loadError) {
         if (!cancelled) {
           setError(errorMessage(loadError));
@@ -45,11 +30,32 @@ export function App() {
 
     return () => {
       cancelled = true;
-      if (intervalId !== undefined) {
-        window.clearInterval(intervalId);
-      }
     };
   }, []);
+
+  useEffect(() => {
+    if (!snapshot) return undefined;
+
+    let cancelled = false;
+    const intervalId = window.setInterval(async () => {
+      try {
+        const refreshedSnapshot = await getPublicSnapshot();
+        if (!cancelled) {
+          setSnapshot(refreshedSnapshot);
+          setError(null);
+        }
+      } catch (refreshError) {
+        if (!cancelled) {
+          setError(errorMessage(refreshError));
+        }
+      }
+    }, durationToMs(snapshot.widgets.refreshInterval));
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [snapshot?.widgets.refreshInterval]);
 
   const shellStyle = useMemo(() => {
     if (!snapshot) return undefined;
