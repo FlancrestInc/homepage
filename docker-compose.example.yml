@@ -5,7 +5,7 @@ services:
     container_name: bookmarks-homepage
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "13000:3000"
     environment:
       NODE_ENV: production
       HOMEPAGE_CONFIG_DIR: /config

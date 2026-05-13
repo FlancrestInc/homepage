@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { getConfig, saveConfig } from "../api";
 import { validateRawConfigShape } from "../configValidation";
 import type { AppConfig } from "../types";
-import { BookmarkEditor } from "./BookmarkEditor";
+import { BookmarkEditor, BookmarkGroupEditor } from "./BookmarkEditor";
 import { ThemeEditor } from "./ThemeEditor";
 import { WidgetEditor } from "./WidgetEditor";
 
@@ -13,10 +13,11 @@ type EditorDrawerProps = {
   onSaved: () => Promise<void>;
 };
 
-type TabId = "bookmarks" | "widgets" | "theme" | "health" | "raw";
+type TabId = "bookmarks" | "groups" | "widgets" | "theme" | "health" | "raw";
 
 const tabs: Array<{ id: TabId; label: string }> = [
   { id: "bookmarks", label: "Bookmarks" },
+  { id: "groups", label: "Groups" },
   { id: "widgets", label: "Widgets" },
   { id: "theme", label: "Theme" },
   { id: "health", label: "Health" },
@@ -72,6 +73,7 @@ export function EditorDrawer({ open, onClose, onSaved }: EditorDrawerProps) {
     if (!draft) return null;
 
     if (activeTab === "bookmarks") return <BookmarkEditor config={draft} onChange={handleDraftChange} />;
+    if (activeTab === "groups") return <BookmarkGroupEditor config={draft} onChange={handleDraftChange} />;
     if (activeTab === "widgets") return <WidgetEditor config={draft} onChange={handleDraftChange} />;
     if (activeTab === "theme") return <ThemeEditor config={draft} onChange={handleDraftChange} />;
     if (activeTab === "health") {

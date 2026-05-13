@@ -4,7 +4,7 @@ export async function getPublicSnapshot(): Promise<PublicSnapshot> {
   const response = await fetch("/api/public-snapshot");
 
   if (!response.ok) {
-    throw new Error(`Failed to load public snapshot: ${response.status}`);
+    throw new Error(await responseErrorMessage(response, "Failed to load public snapshot"));
   }
 
   return response.json() as Promise<PublicSnapshot>;
@@ -46,11 +46,24 @@ async function responseErrorDetails(response: Response) {
   } catch {
     try {
       const text = await textResponse.text();
-      return text.trim();
+      return formatTextErrorBody(text, response.headers.get("content-type"), response.headers.get("server"));
     } catch {
       return "";
     }
   }
+}
+
+function formatTextErrorBody(text: string, contentType: string | null, server: string | null) {
+  const trimmedText = text.trim();
+  if (!trimmedText) return "";
+
+  if (contentType?.includes("text/html")) {
+    const title = trimmedText.match(/<title[^>]*>(.*?)<\/title>/is)?.[1]?.replace(/\s+/g, " ").trim();
+    const source = server?.toLowerCase().includes("cloudflare") ? "Cloudflare/proxy" : "Proxy/origin";
+    return title ? `${source} returned an HTML error page: ${title}` : `${source} returned an HTML error page`;
+  }
+
+  return trimmedText.length > 240 ? `${trimmedText.slice(0, 240)}...` : trimmedText;
 }
 
 function formatErrorBody(body: unknown) {

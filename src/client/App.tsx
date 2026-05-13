@@ -5,6 +5,7 @@ import { getPublicSnapshot } from "./api";
 import { BookmarkGrid } from "./components/BookmarkGrid";
 import { EditorDrawer } from "./components/EditorDrawer";
 import { WidgetBand } from "./components/WidgetBand";
+import { durationToMs, refreshRetryDelayMs } from "./refreshSchedule";
 import type { PublicSnapshot } from "./types";
 
 export function App() {
@@ -39,23 +40,37 @@ export function App() {
     if (!snapshot) return undefined;
 
     let cancelled = false;
-    const intervalId = window.setInterval(async () => {
+    let timeoutId: number | undefined;
+    let consecutiveFailures = 0;
+    const baseDelayMs = durationToMs(snapshot.widgets.refreshInterval);
+
+    function scheduleNextRefresh() {
+      timeoutId = window.setTimeout(refreshSnapshot, refreshRetryDelayMs(baseDelayMs, consecutiveFailures));
+    }
+
+    async function refreshSnapshot() {
       try {
         const refreshedSnapshot = await getPublicSnapshot();
         if (!cancelled) {
           setSnapshot(refreshedSnapshot);
           setError(null);
+          consecutiveFailures = 0;
         }
       } catch (refreshError) {
         if (!cancelled) {
+          consecutiveFailures += 1;
           setError(errorMessage(refreshError));
         }
+      } finally {
+        if (!cancelled) scheduleNextRefresh();
       }
-    }, durationToMs(snapshot.widgets.refreshInterval));
+    }
+
+    scheduleNextRefresh();
 
     return () => {
       cancelled = true;
-      window.clearInterval(intervalId);
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
     };
   }, [snapshot?.widgets.refreshInterval]);
 
@@ -63,9 +78,10 @@ export function App() {
     if (!snapshot) return undefined;
     const mode = resolveThemeMode(snapshot.theme.mode);
     const palette = mode === "light" ? lightPalette : darkPalette;
+    const hasVideoBackground = isVideoBackground(snapshot.theme.background);
     return {
       "--accent-color": snapshot.theme.accentColor,
-      "--page-background": pageBackground(snapshot.theme.background, palette.pageBackground),
+      "--page-background": hasVideoBackground ? palette.pageBackground : pageBackground(snapshot.theme.background, palette.pageBackground),
       "--panel-background": palette.panelBackground,
       "--panel-border": palette.panelBorder,
       "--muted-text": palette.mutedText,
@@ -87,6 +103,7 @@ export function App() {
 
   return (
     <main className="app-shell" style={shellStyle}>
+      <BackgroundMedia background={snapshot.theme.background} />
       <WidgetBand
         generatedAt={snapshot.generatedAt}
         time={snapshot.widgets.time}
@@ -109,12 +126,12 @@ export function App() {
   }
 }
 
-function durationToMs(value: string) {
-  const match = value.match(/^(\d+)(s|m|h|d)$/);
-  if (!match) return 30000;
-  const amount = Number(match[1]);
-  const unit = match[2] as "s" | "m" | "h" | "d";
-  return amount * ({ s: 1000, m: 60000, h: 3600000, d: 86400000 }[unit] ?? 1000);
+function BackgroundMedia({ background }: { background: PublicSnapshot["theme"]["background"] }) {
+  if (!isVideoBackground(background)) return null;
+
+  return (
+    <video className={`background-media background-media-${background.style}`} src={background.value} autoPlay muted loop playsInline aria-hidden="true" />
+  );
 }
 
 function errorMessage(error: unknown) {
@@ -157,4 +174,9 @@ function pageBackground(background: PublicSnapshot["theme"]["background"], fallb
   if (background.style === "stretch") return `${fallbackColor} ${image} center / 100% 100% no-repeat fixed`;
   if (background.style === "center") return `${fallbackColor} ${image} center / auto no-repeat fixed`;
   return `${fallbackColor} ${image} center / cover no-repeat fixed`;
+}
+
+function isVideoBackground(background: PublicSnapshot["theme"]["background"]) {
+  if (background.type !== "image") return false;
+  return /\.(webm|mp4|ogg|ogv)(?:[?#].*)?$/i.test(background.value);
 }

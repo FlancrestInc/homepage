@@ -57,7 +57,11 @@ export function ThemeEditor({ config, onChange }: ThemeEditorProps) {
               {theme.background.type === "color" ? (
                 <input type="color" value={safeColor(theme.background.value)} onChange={(event) => onChange({ ...config, theme: { ...theme, background: { ...theme.background, value: event.target.value } } })} aria-label="Background color swatch" />
               ) : null}
-              <input value={theme.background.value} onChange={(event) => onChange({ ...config, theme: { ...theme, background: { ...theme.background, value: event.target.value } } })} placeholder={theme.background.type === "image" ? "https://example.com/background.jpg" : "#1d2a3b"} />
+              <input
+                value={theme.background.value}
+                onChange={(event) => onChange({ ...config, theme: { ...theme, background: { ...theme.background, value: event.target.value } } })}
+                placeholder={theme.background.type === "image" ? "https://example.com/background.jpg, .png, .gif, .webp, .webm, or .mp4" : "#1d2a3b"}
+              />
             </span>
           </label>
           {theme.background.type === "image" ? (

@@ -177,11 +177,19 @@ export function WidgetEditor({ config, onChange }: WidgetEditorProps) {
             </label>
             <label>
               CPU query
-              <input value={server.cpuQuery ?? ""} onChange={(event) => updateServer(index, { ...server, cpuQuery: optionalText(event.target.value) })} />
+              <input
+                value={server.cpuQuery ?? ""}
+                onChange={(event) => updateServer(index, { ...server, cpuQuery: optionalText(event.target.value) })}
+                title="Prometheus expression that returns this server's CPU usage as a percentage from 0 to 100. Leave blank to use the default query for the selected source."
+              />
             </label>
             <label>
               RAM query
-              <input value={server.ramQuery ?? ""} onChange={(event) => updateServer(index, { ...server, ramQuery: optionalText(event.target.value) })} />
+              <input
+                value={server.ramQuery ?? ""}
+                onChange={(event) => updateServer(index, { ...server, ramQuery: optionalText(event.target.value) })}
+                title="Prometheus expression that returns this server's RAM usage as a percentage from 0 to 100. Leave blank to use the default query for the selected source."
+              />
             </label>
             <label>
               Glances URL

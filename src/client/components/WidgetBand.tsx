@@ -90,10 +90,22 @@ function MonitorWidget({ monitor }: { monitor: MonitorCard }) {
 function Sparkline({ cpu, ram }: { cpu: MetricPoint[]; ram: MetricPoint[] }) {
   const cpuPath = pointsToPath(cpu);
   const ramPath = pointsToPath(ram);
+  const startTime = formatStartTime([...cpu, ...ram]);
 
   return (
-    <svg className="monitor-sparkline" viewBox="0 0 120 34" role="img" aria-label="CPU and RAM history">
-      <line x1="0" y1="17" x2="120" y2="17" className="sparkline-axis" />
+    <svg className="monitor-sparkline" viewBox="0 0 150 48" role="img" aria-label={`CPU and RAM history from ${startTime}`}>
+      <text x="0" y="9" className="sparkline-label">
+        100%
+      </text>
+      <text x="7" y="36" className="sparkline-label">
+        0%
+      </text>
+      <text x="24" y="46" className="sparkline-label">
+        Start {startTime}
+      </text>
+      <line x1="24" y1="4" x2="24" y2="34" className="sparkline-axis" />
+      <line x1="24" y1="34" x2="150" y2="34" className="sparkline-axis" />
+      <line x1="24" y1="19" x2="150" y2="19" className="sparkline-axis sparkline-midline" />
       {cpuPath ? <path d={cpuPath} className="sparkline-cpu" /> : null}
       {ramPath ? <path d={ramPath} className="sparkline-ram" /> : null}
     </svg>
@@ -105,12 +117,12 @@ function pointsToPath(points: MetricPoint[]) {
   if (finite.length === 0) return "";
   if (finite.length === 1) {
     const y = valueToY(finite[0].value);
-    return `M 0 ${y} L 120 ${y}`;
+    return `M 24 ${y} L 150 ${y}`;
   }
 
   return finite
     .map((point, index) => {
-      const x = (index / (finite.length - 1)) * 120;
+      const x = 24 + (index / (finite.length - 1)) * 126;
       const y = valueToY(point.value);
       return `${index === 0 ? "M" : "L"} ${round(x)} ${y}`;
     })
@@ -119,7 +131,7 @@ function pointsToPath(points: MetricPoint[]) {
 
 function valueToY(value: number) {
   const clamped = Math.max(0, Math.min(100, value));
-  return round(32 - (clamped / 100) * 30);
+  return round(34 - (clamped / 100) * 30);
 }
 
 function round(value: number) {
@@ -144,6 +156,12 @@ function formatTime(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "unknown";
   return new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(date);
+}
+
+function formatStartTime(points: MetricPoint[]) {
+  const timestamps = points.map((point) => new Date(point.timestamp).getTime()).filter((timestamp) => Number.isFinite(timestamp));
+  if (!timestamps.length) return "unknown";
+  return formatTime(new Date(Math.min(...timestamps)).toISOString());
 }
 
 function formatPercent(value: number | null) {

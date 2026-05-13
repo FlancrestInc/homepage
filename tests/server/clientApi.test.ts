@@ -1,5 +1,5 @@
 import { afterEach, expect, test, vi } from "vitest";
-import { getConfig, saveConfig, searchIcons } from "../../src/client/api";
+import { getConfig, getPublicSnapshot, saveConfig, searchIcons } from "../../src/client/api";
 import type { AppConfig } from "../../src/client/types";
 
 afterEach(() => {
@@ -39,6 +39,31 @@ test("getConfig includes validation issue details from failed responses", async 
   );
 
   await expect(getConfig()).rejects.toThrow("Config request failed: 400 - invalid_config: theme.mode: Invalid option");
+});
+
+test("getPublicSnapshot summarizes proxy html errors", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => {
+      return new Response("<html><head><title>502: Bad gateway</title></head><body>Cloudflare error</body></html>", {
+        status: 502,
+        headers: { "content-type": "text/html; charset=UTF-8", server: "cloudflare" }
+      });
+    })
+  );
+
+  await expect(getPublicSnapshot()).rejects.toThrow("Failed to load public snapshot: 502 - Cloudflare/proxy returned an HTML error page: 502: Bad gateway");
+});
+
+test("text error details are truncated", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => {
+      return new Response("x".repeat(320), { status: 502, headers: { "content-type": "text/plain" } });
+    })
+  );
+
+  await expect(getPublicSnapshot()).rejects.toThrow(`${"x".repeat(240)}...`);
 });
 
 test("searchIcons passes abort signals to fetch", async () => {

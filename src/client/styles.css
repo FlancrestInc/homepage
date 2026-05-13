@@ -26,20 +26,52 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  overflow: hidden;
+  overflow: auto;
 }
 
 .app-shell {
+  position: relative;
   width: 100%;
   min-height: 100vh;
-  max-height: 100vh;
   padding: 14px 18px 16px;
   display: grid;
   grid-template-rows: auto 1fr;
   gap: 14px;
   background: var(--page-background);
   color: var(--primary-text);
-  overflow: hidden;
+  overflow: visible;
+}
+
+.widget-band,
+.bookmark-groups {
+  position: relative;
+  z-index: 1;
+}
+
+.background-media {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.background-media-cover,
+.background-media-tile {
+  object-fit: cover;
+}
+
+.background-media-contain {
+  object-fit: contain;
+}
+
+.background-media-stretch {
+  object-fit: fill;
+}
+
+.background-media-center {
+  object-fit: none;
 }
 
 .loading-shell {
@@ -120,7 +152,7 @@ body {
   min-height: 82px;
   padding: 9px 10px 8px;
   display: grid;
-  grid-template-rows: auto 34px auto;
+  grid-template-rows: auto 48px auto;
   gap: 4px;
 }
 
@@ -146,13 +178,23 @@ body {
 
 .monitor-sparkline {
   width: 100%;
-  height: 34px;
+  height: 48px;
   overflow: visible;
 }
 
 .sparkline-axis {
   stroke: rgba(203, 217, 242, 0.13);
   stroke-width: 1;
+}
+
+.sparkline-midline {
+  stroke-dasharray: 3 3;
+}
+
+.sparkline-label {
+  fill: var(--muted-text);
+  font-size: 8px;
+  font-weight: 700;
 }
 
 .sparkline-cpu,
@@ -192,7 +234,7 @@ body {
   align-content: start;
   justify-content: center;
   gap: 12px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .bookmark-group {
@@ -353,6 +395,7 @@ body {
   position: fixed;
   right: 72px;
   bottom: 16px;
+  z-index: 11;
   max-width: 360px;
   margin: 0;
   padding: 9px 11px;
@@ -378,7 +421,7 @@ body {
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr) auto auto;
   color: var(--primary-text);
-  background: color-mix(in srgb, var(--page-background) 82%, black 18%);
+  background: #101928;
   border-left: 1px solid rgba(219, 232, 255, 0.18);
   box-shadow: -18px 0 42px rgba(0, 0, 0, 0.36);
 }
@@ -508,6 +551,89 @@ body {
   background: rgba(238, 244, 255, 0.055);
   border: 1px solid rgba(219, 232, 255, 0.14);
   border-radius: 8px;
+}
+
+.collapsible-panel {
+  padding: 0;
+}
+
+.collapsible-panel summary,
+.nested-editor-panel summary {
+  min-height: 42px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 0 12px;
+  color: var(--primary-text);
+  cursor: pointer;
+  list-style: none;
+}
+
+.collapsible-panel summary::-webkit-details-marker,
+.nested-editor-panel summary::-webkit-details-marker {
+  display: none;
+}
+
+.collapsible-panel summary::before,
+.nested-editor-panel summary::before {
+  content: "+";
+  width: 18px;
+  color: var(--accent-color);
+  font-weight: 900;
+}
+
+.collapsible-panel[open] > summary::before,
+.nested-editor-panel[open] > summary::before {
+  content: "-";
+}
+
+.collapsible-panel summary {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.nested-editor-panel summary {
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1.4fr);
+}
+
+.collapsible-panel summary span,
+.nested-editor-panel summary span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.collapsible-panel summary span:last-child,
+.nested-editor-panel summary span:last-child {
+  color: var(--muted-text);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.collapsible-content {
+  display: grid;
+  gap: 8px;
+  padding: 0 12px 12px;
+}
+
+.nested-editor-panel {
+  min-width: 0;
+  background: rgba(238, 244, 255, 0.045);
+  border: 1px solid rgba(219, 232, 255, 0.12);
+  border-radius: 7px;
+}
+
+.nested-editor-panel > .form-grid,
+.nested-editor-panel > .row-actions {
+  margin: 0 10px;
+}
+
+.nested-editor-panel > .form-grid {
+  padding-top: 10px;
+}
+
+.nested-editor-panel > .row-actions {
+  margin-bottom: 10px;
 }
 
 .editor-panel legend {
@@ -826,15 +952,9 @@ body {
 }
 
 @media (max-width: 760px) {
-  body {
-    overflow: auto;
-  }
-
   .app-shell {
     min-height: 100vh;
-    max-height: none;
     padding: 12px;
-    overflow: visible;
   }
 
   .widget-band {
@@ -859,7 +979,6 @@ body {
 
   .bookmark-groups {
     justify-content: stretch;
-    overflow: visible;
   }
 
   .bookmark-group {
