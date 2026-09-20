@@ -1,35 +1,41 @@
 import { Settings } from "lucide-react";
 import type { CSSProperties } from "react";
-import { useEffect, useMemo, useState } from "react";
-import { getPublicSnapshot } from "./api";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { getBookmarkSnapshot, getWidgetSnapshot } from "./api";
 import { BookmarkGrid } from "./components/BookmarkGrid";
-import { EditorDrawer } from "./components/EditorDrawer";
-import { WidgetBand } from "./components/WidgetBand";
 import { durationToMs, refreshRetryDelayMs } from "./refreshSchedule";
-import type { PublicSnapshot } from "./types";
+import type { BookmarkSnapshot, WidgetSnapshot } from "./types";
+
+const EditorDrawer = lazy(() => import("./components/EditorDrawer").then(({ EditorDrawer: component }) => ({ default: component })));
+const WidgetBand = lazy(() => import("./components/WidgetBand").then(({ WidgetBand: component }) => ({ default: component })));
 
 export function App() {
-  const [snapshot, setSnapshot] = useState<PublicSnapshot | null>(null);
+  const [bookmarkSnapshot, setBookmarkSnapshot] = useState<BookmarkSnapshot | null>(null);
+  const [widgetSnapshot, setWidgetSnapshot] = useState<WidgetSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
 
-    async function loadInitialSnapshot() {
-      try {
-        const nextSnapshot = await getPublicSnapshot();
+    void getBookmarkSnapshot()
+      .then((nextSnapshot) => {
         if (cancelled) return;
-        setSnapshot(nextSnapshot);
+        setBookmarkSnapshot(nextSnapshot);
         setError(null);
-      } catch (loadError) {
-        if (!cancelled) {
-          setError(errorMessage(loadError));
-        }
-      }
-    }
+      })
+      .catch((loadError) => {
+        if (!cancelled) setError(errorMessage(loadError));
+      });
 
-    void loadInitialSnapshot();
+    void getWidgetSnapshot()
+      .then((nextSnapshot) => {
+        if (cancelled) return;
+        setWidgetSnapshot(nextSnapshot);
+      })
+      .catch((loadError) => {
+        if (!cancelled) setError(errorMessage(loadError));
+      });
 
     return () => {
       cancelled = true;
@@ -37,12 +43,10 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (!snapshot) return undefined;
-
     let cancelled = false;
     let timeoutId: number | undefined;
     let consecutiveFailures = 0;
-    const baseDelayMs = durationToMs(snapshot.widgets.refreshInterval);
+    const baseDelayMs = durationToMs(widgetSnapshot?.widgets.refreshInterval ?? "30s");
 
     function scheduleNextRefresh() {
       timeoutId = window.setTimeout(refreshSnapshot, refreshRetryDelayMs(baseDelayMs, consecutiveFailures));
@@ -50,9 +54,9 @@ export function App() {
 
     async function refreshSnapshot() {
       try {
-        const refreshedSnapshot = await getPublicSnapshot();
+        const refreshedSnapshot = await getWidgetSnapshot();
         if (!cancelled) {
-          setSnapshot(refreshedSnapshot);
+          setWidgetSnapshot(refreshedSnapshot);
           setError(null);
           consecutiveFailures = 0;
         }
@@ -72,16 +76,16 @@ export function App() {
       cancelled = true;
       if (timeoutId !== undefined) window.clearTimeout(timeoutId);
     };
-  }, [snapshot?.widgets.refreshInterval]);
+  }, [widgetSnapshot?.widgets.refreshInterval]);
 
   const shellStyle = useMemo(() => {
-    if (!snapshot) return undefined;
-    const mode = resolveThemeMode(snapshot.theme.mode);
+    if (!bookmarkSnapshot) return undefined;
+    const mode = resolveThemeMode(bookmarkSnapshot.theme.mode);
     const palette = mode === "light" ? lightPalette : darkPalette;
-    const hasVideoBackground = isVideoBackground(snapshot.theme.background);
+    const hasVideoBackground = isVideoBackground(bookmarkSnapshot.theme.background);
     return {
-      "--accent-color": snapshot.theme.accentColor,
-      "--page-background": hasVideoBackground ? palette.pageBackground : pageBackground(snapshot.theme.background, palette.pageBackground),
+      "--accent-color": bookmarkSnapshot.theme.accentColor,
+      "--page-background": hasVideoBackground ? palette.pageBackground : pageBackground(bookmarkSnapshot.theme.background, palette.pageBackground),
       "--panel-background": palette.panelBackground,
       "--panel-border": palette.panelBorder,
       "--muted-text": palette.mutedText,
@@ -91,9 +95,9 @@ export function App() {
       "--tooltip-background": palette.tooltipBackground,
       colorScheme: mode
     } as CSSProperties;
-  }, [snapshot]);
+  }, [bookmarkSnapshot]);
 
-  if (!snapshot) {
+  if (!bookmarkSnapshot) {
     return (
       <main className="app-shell loading-shell">
         <p>{error ?? "Loading homepage"}</p>
@@ -103,30 +107,39 @@ export function App() {
 
   return (
     <main className="app-shell" style={shellStyle}>
-      <BackgroundMedia background={snapshot.theme.background} />
-      <WidgetBand
-        generatedAt={snapshot.generatedAt}
-        time={snapshot.widgets.time}
-        weather={snapshot.widgets.weather}
-        monitors={snapshot.widgets.monitors}
-      />
-      <BookmarkGrid groups={snapshot.groups} />
+      <BackgroundMedia background={bookmarkSnapshot.theme.background} />
+      <BookmarkGrid groups={bookmarkSnapshot.groups} />
+      {widgetSnapshot ? (
+        <Suspense fallback={null}>
+          <WidgetBand
+            generatedAt={widgetSnapshot.generatedAt}
+            time={widgetSnapshot.widgets.time}
+            weather={widgetSnapshot.widgets.weather}
+            monitors={widgetSnapshot.widgets.monitors}
+          />
+        </Suspense>
+      ) : null}
       {error ? <p className="refresh-error">Refresh failed: {error}</p> : null}
-      <button className={`settings-button ${snapshot.layout.editorButton}`} type="button" aria-label="Open settings" onClick={() => setEditorOpen(true)}>
+      <button className={`settings-button ${bookmarkSnapshot.layout.editorButton}`} type="button" aria-label="Open settings" onClick={() => setEditorOpen(true)}>
         <Settings aria-hidden="true" size={18} strokeWidth={2} />
       </button>
-      <EditorDrawer open={editorOpen} onClose={() => setEditorOpen(false)} onSaved={reloadSnapshot} />
+      {editorOpen ? (
+        <Suspense fallback={null}>
+          <EditorDrawer open={editorOpen} onClose={() => setEditorOpen(false)} onSaved={reloadSnapshot} />
+        </Suspense>
+      ) : null}
     </main>
   );
 
   async function reloadSnapshot() {
-    const nextSnapshot = await getPublicSnapshot();
-    setSnapshot(nextSnapshot);
+    const [nextBookmarkSnapshot, nextWidgetSnapshot] = await Promise.all([getBookmarkSnapshot(), getWidgetSnapshot()]);
+    setBookmarkSnapshot(nextBookmarkSnapshot);
+    setWidgetSnapshot(nextWidgetSnapshot);
     setError(null);
   }
 }
 
-function BackgroundMedia({ background }: { background: PublicSnapshot["theme"]["background"] }) {
+function BackgroundMedia({ background }: { background: BookmarkSnapshot["theme"]["background"] }) {
   if (!isVideoBackground(background)) return null;
 
   return (
@@ -160,12 +173,12 @@ const lightPalette = {
   tooltipBackground: "rgba(20, 32, 51, 0.94)"
 };
 
-function resolveThemeMode(mode: PublicSnapshot["theme"]["mode"]) {
+function resolveThemeMode(mode: BookmarkSnapshot["theme"]["mode"]) {
   if (mode !== "system") return mode;
   return window.matchMedia?.("(prefers-color-scheme: light)").matches ? "light" : "dark";
 }
 
-function pageBackground(background: PublicSnapshot["theme"]["background"], fallbackColor: string) {
+function pageBackground(background: BookmarkSnapshot["theme"]["background"], fallbackColor: string) {
   if (background.type === "color") return background.value || fallbackColor;
 
   const image = `url("${background.value}")`;
@@ -176,7 +189,7 @@ function pageBackground(background: PublicSnapshot["theme"]["background"], fallb
   return `${fallbackColor} ${image} center / cover no-repeat fixed`;
 }
 
-function isVideoBackground(background: PublicSnapshot["theme"]["background"]) {
+function isVideoBackground(background: BookmarkSnapshot["theme"]["background"]) {
   if (background.type !== "image") return false;
   return /\.(webm|mp4|ogg|ogv)(?:[?#].*)?$/i.test(background.value);
 }

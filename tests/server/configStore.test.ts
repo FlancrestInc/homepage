@@ -2,7 +2,7 @@ import { mkdtemp, readFile, readdir, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { loadConfig, saveConfig } from "../../src/server/config/store";
+import { ensureConfigFile, loadConfig, saveConfig } from "../../src/server/config/store";
 
 async function tempConfigPath() {
   const dir = await mkdtemp(path.join(os.tmpdir(), "homepage-config-"));
@@ -12,10 +12,21 @@ async function tempConfigPath() {
 describe("config store", () => {
   it("creates a default config when the config file is missing", async () => {
     const configPath = await tempConfigPath();
+    await ensureConfigFile(configPath);
     const config = await loadConfig(configPath);
     expect(config.theme.mode).toBe("dark");
     expect(config.layout.editorButton).toBe("bottom-right");
     expect(config.bookmarks).toEqual([]);
+    await expect(readFile(configPath, "utf8")).resolves.toContain("mode: dark");
+  });
+
+  it("does not overwrite an existing config when ensuring startup state", async () => {
+    const configPath = await tempConfigPath();
+    await writeFile(configPath, "theme:\n  mode: light\n");
+
+    await ensureConfigFile(configPath);
+
+    await expect(readFile(configPath, "utf8")).resolves.toContain("mode: light");
   });
 
   it("returns a fresh default config for each missing file load", async () => {

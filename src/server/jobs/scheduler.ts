@@ -1,5 +1,6 @@
 import path from "node:path";
 import { readJsonCache, writeJsonCache } from "../cache/cacheStore.js";
+import type { CachedHealth } from "../cache/publicSnapshot.js";
 import { loadConfig } from "../config/store.js";
 import type { AppEnv } from "../env.js";
 import { refreshHealthChecks } from "./healthChecks.js";
@@ -8,6 +9,7 @@ import { refreshWeather } from "./weather.js";
 
 export type SchedulerHandle = {
   stop: () => void;
+  reload: () => Promise<void>;
 };
 
 export function durationToMs(value: string): number {
@@ -25,21 +27,36 @@ export async function startScheduler(env: AppEnv): Promise<SchedulerHandle> {
   const weatherRunner = createNoOverlapRunner(() => runWeather(env));
   const monitorsRunner = createNoOverlapRunner(() => runMonitors(env));
 
+  scheduleIntervals(config);
   healthRunner();
   weatherRunner();
   monitorsRunner();
 
-  intervals.push(setInterval(healthRunner, durationToMs(config.healthChecks.defaultInterval)));
-  intervals.push(setInterval(weatherRunner, durationToMs(config.widgets.weather.refreshInterval)));
-  intervals.push(setInterval(monitorsRunner, durationToMs(config.widgets.monitors.refreshInterval)));
-
   return {
     stop: () => {
-      for (const interval of intervals) {
-        clearInterval(interval);
-      }
+      clearIntervals();
+    },
+    reload: async () => {
+      const nextConfig = await loadConfig(env.configPath);
+      clearIntervals();
+      scheduleIntervals(nextConfig);
+      healthRunner();
+      weatherRunner();
+      monitorsRunner();
     }
   };
+
+  function scheduleIntervals(nextConfig: Awaited<ReturnType<typeof loadConfig>>) {
+    intervals.push(setInterval(healthRunner, healthScheduleMs(nextConfig)));
+    intervals.push(setInterval(weatherRunner, durationToMs(nextConfig.widgets.weather.refreshInterval)));
+    intervals.push(setInterval(monitorsRunner, durationToMs(nextConfig.widgets.monitors.refreshInterval)));
+  }
+
+  function clearIntervals() {
+    for (const interval of intervals.splice(0)) {
+      clearInterval(interval);
+    }
+  }
 }
 
 export function createNoOverlapRunner(job: () => Promise<void>): () => void {
@@ -62,14 +79,28 @@ export function createNoOverlapRunner(job: () => Promise<void>): () => void {
 async function runHealthChecks(env: AppEnv) {
   try {
     const config = await loadConfig(env.configPath);
+    const previous = await readJsonCache<CachedHealth>(path.join(env.cacheDir, "health.json"), {});
     const health = await refreshHealthChecks({
       bookmarks: config.bookmarks,
-      timeout: durationToMs(config.healthChecks.timeout)
+      timeout: durationToMs(config.healthChecks.timeout),
+      defaultInterval: durationToMs(config.healthChecks.defaultInterval),
+      previous
     });
     await writeJsonCache(path.join(env.cacheDir, "health.json"), health);
   } catch (error) {
     reportJobError("health checks", error);
   }
+}
+
+function healthScheduleMs(config: Awaited<ReturnType<typeof loadConfig>>) {
+  const intervals = [
+    durationToMs(config.healthChecks.defaultInterval),
+    ...config.bookmarks
+      .map((bookmark) => bookmark.health.interval)
+      .filter((interval): interval is string => Boolean(interval))
+      .map(durationToMs)
+  ];
+  return Math.min(...intervals);
 }
 
 async function runWeather(env: AppEnv) {

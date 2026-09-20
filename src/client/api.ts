@@ -1,4 +1,24 @@
-import type { AppConfig, IconSearchResult, PublicSnapshot } from "./types";
+import type { AppConfig, BookmarkSnapshot, IconSearchResult, PublicSnapshot, WidgetSnapshot } from "./types";
+
+export async function getBookmarkSnapshot(): Promise<BookmarkSnapshot> {
+  const response = await fetch("/api/bookmarks-snapshot");
+
+  if (!response.ok) {
+    throw new Error(await responseErrorMessage(response, "Failed to load bookmarks"));
+  }
+
+  return response.json() as Promise<BookmarkSnapshot>;
+}
+
+export async function getWidgetSnapshot(): Promise<WidgetSnapshot> {
+  const response = await fetch("/api/widgets-snapshot");
+
+  if (!response.ok) {
+    throw new Error(await responseErrorMessage(response, "Failed to load widgets"));
+  }
+
+  return response.json() as Promise<WidgetSnapshot>;
+}
 
 export async function getPublicSnapshot(): Promise<PublicSnapshot> {
   const response = await fetch("/api/public-snapshot");

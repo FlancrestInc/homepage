@@ -3,7 +3,7 @@ import { ZodError } from "zod";
 import { loadConfig, saveConfig } from "../config/store.js";
 import type { AppEnv } from "../env.js";
 
-export async function registerConfigRoutes(app: FastifyInstance, env: AppEnv) {
+export async function registerConfigRoutes(app: FastifyInstance, env: AppEnv, options: { onConfigSaved?: () => Promise<void> } = {}) {
   app.get("/api/config", async (_request, reply) => {
     try {
       return await loadConfig(env.configPath);
@@ -14,7 +14,9 @@ export async function registerConfigRoutes(app: FastifyInstance, env: AppEnv) {
 
   app.put("/api/config", async (request, reply) => {
     try {
-      return await saveConfig(env.configPath, request.body);
+      const config = await saveConfig(env.configPath, request.body);
+      await options.onConfigSaved?.();
+      return config;
     } catch (error) {
       return handleConfigError(error, reply);
     }

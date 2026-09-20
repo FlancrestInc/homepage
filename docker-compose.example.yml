@@ -9,5 +9,7 @@ services:
     environment:
       NODE_ENV: production
       HOMEPAGE_CONFIG_DIR: /config
+      HOMEPAGE_AUTH_USER: ${HOMEPAGE_AUTH_USER:?Set HOMEPAGE_AUTH_USER for built-in access control}
+      HOMEPAGE_AUTH_PASSWORD: ${HOMEPAGE_AUTH_PASSWORD:?Set HOMEPAGE_AUTH_PASSWORD for built-in access control}
     volumes:
       - ./config:/config

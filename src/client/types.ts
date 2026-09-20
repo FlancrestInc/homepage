@@ -51,6 +51,8 @@ export type PublicBookmark = {
   name: string;
   group: string;
   icon: string;
+  iconPath?: string;
+  iconDefaultColor?: string;
   iconColor?: string;
   url: string;
   healthMode: "default" | "custom" | "disabled";
@@ -67,20 +69,26 @@ export type PublicBookmarkGroup = {
   bookmarks: PublicBookmark[];
 };
 
-export type PublicSnapshot = {
+export type BookmarkSnapshot = {
   generatedAt: string;
   theme: ThemeConfig;
   layout: {
     editorButton: "bottom-right" | "bottom-left";
   };
+  groups: PublicBookmarkGroup[];
+};
+
+export type WidgetSnapshot = {
+  generatedAt: string;
   widgets: {
     refreshInterval: string;
     time: TimeWidgetConfig;
     weather: CachedWeather | null;
     monitors: MonitorCard[];
   };
-  groups: PublicBookmarkGroup[];
 };
+
+export type PublicSnapshot = BookmarkSnapshot & WidgetSnapshot;
 
 export type BookmarkHealthConfig = {
   mode: "default" | "custom" | "disabled";
@@ -104,6 +112,8 @@ export type IconSearchResult = {
   name: string;
   value: string;
   source: "simple-icons" | "mdi";
+  path: string;
+  color?: string;
 };
 
 export type BookmarkGroupConfig = {

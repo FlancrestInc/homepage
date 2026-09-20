@@ -10,7 +10,10 @@ Build and run locally:
 
 ```bash
 docker build -t bookmarks-homepage:local .
-docker run --rm -p 3000:3000 -v "$(pwd)/config:/config" bookmarks-homepage:local
+docker run --rm -p 3000:3000 \
+  -e HOMEPAGE_AUTH_USER=admin \
+  -e HOMEPAGE_AUTH_PASSWORD=change-me \
+  -v "$(pwd)/config:/config" bookmarks-homepage:local
 ```
 
 Or use the compose example:
@@ -33,10 +36,11 @@ Useful environment variables:
 - `HOMEPAGE_CONFIG_PATH`: explicit config file path.
 - `HOMEPAGE_CACHE_DIR`: explicit cache directory path.
 - `HOMEPAGE_STATIC_DIR`: static client build directory, default `dist/client`.
+- `HOMEPAGE_AUTH_USER` and `HOMEPAGE_AUTH_PASSWORD`: enable built-in HTTP Basic authentication.
 
 ## Deployment Notes
 
-This app does not include authentication. It assumes access is controlled by your network or a proxy such as Cloudflare Zero Trust.
+Access control is required. The Docker examples enable built-in HTTP Basic authentication through `HOMEPAGE_AUTH_USER` and `HOMEPAGE_AUTH_PASSWORD`; replace the example password before use. Alternatively, put the app behind an authenticated reverse proxy such as Cloudflare Zero Trust and omit the built-in credentials. The health endpoint remains available without credentials for container probes.
 
 Server monitors are Prometheus-first. Configure `widgets.monitors.prometheusUrl`, `cpuQuery`, and `ramQuery` when your Prometheus stack already has the metrics. Glances remains available per monitor by setting the monitor source to `glances` and providing `glancesUrl`.
 

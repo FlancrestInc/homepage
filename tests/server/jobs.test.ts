@@ -90,6 +90,30 @@ describe("health checks", () => {
 
     expect(result[bookmarkHealthKey(bookmark)]?.status).toBe("up");
   });
+
+  it("honors per-bookmark health intervals when cached status is still fresh", async () => {
+    const bookmark: Bookmark = {
+      name: "Slow service",
+      group: "Services",
+      icon: "mdi-server",
+      url: "https://slow.example.com",
+      health: { mode: "default", method: "GET", headers: {}, expectedStatuses: [200], interval: "1h" }
+    };
+    const checkedAt = "2026-05-11T17:00:00.000Z";
+    const fetchMock = vi.fn().mockResolvedValue({ status: 200 });
+
+    const result = await refreshHealthChecks({
+      bookmarks: [bookmark],
+      timeout: 1000,
+      defaultInterval: 5 * 60 * 1000,
+      previous: { [bookmarkHealthKey(bookmark)]: { status: "up", checkedAt } },
+      now: new Date("2026-05-11T17:30:00.000Z"),
+      fetchImpl: fetchMock
+    });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(result[bookmarkHealthKey(bookmark)]).toEqual({ status: "up", checkedAt });
+  });
 });
 
 describe("prometheus integration", () => {
@@ -321,6 +345,32 @@ widgets:
         scheduler.stop();
       }
     } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("reloads scheduling and immediately refreshes the current configuration", async () => {
+    const env = await createTestEnv();
+    await writeFile(env.configPath, "healthChecks:\n  defaultInterval: 1h\n");
+    const fetchMock = vi.fn().mockResolvedValue({ status: 200 });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const scheduler = await startScheduler(env);
+    try {
+      await writeFile(env.configPath, [
+        "bookmarks:",
+        "  - name: Service",
+        "    group: Services",
+        "    icon: mdi-server",
+        "    url: https://service.example.com",
+        "healthChecks:",
+        "  defaultInterval: 1s"
+      ].join("\n"), "utf8");
+
+      await scheduler.reload();
+      await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledWith("https://service.example.com", expect.any(Object)));
+    } finally {
+      scheduler.stop();
       vi.unstubAllGlobals();
     }
   });

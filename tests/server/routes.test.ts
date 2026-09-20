@@ -40,6 +40,20 @@ describe("routes", () => {
     });
   });
 
+  it("serves bookmarks independently from widget caches", async () => {
+    await withTestApp(async (app) => {
+      const bookmarkResponse = await app.inject({ method: "GET", url: "/api/bookmarks-snapshot" });
+      const widgetResponse = await app.inject({ method: "GET", url: "/api/widgets-snapshot" });
+
+      expect(bookmarkResponse.statusCode).toBe(200);
+      expect(bookmarkResponse.json().groups).toEqual([]);
+      expect(bookmarkResponse.json().widgets).toBeUndefined();
+      expect(widgetResponse.statusCode).toBe(200);
+      expect(widgetResponse.json().widgets).toBeDefined();
+      expect(widgetResponse.json().groups).toBeUndefined();
+    });
+  });
+
   it("saves valid config through the config API", async () => {
     await withTestApp(async (app) => {
       const response = await app.inject({
@@ -74,20 +88,43 @@ describe("routes", () => {
     });
   });
 
+  it("protects the app with optional HTTP Basic authentication", async () => {
+    await withTestApp(async (app) => {
+      const healthResponse = await app.inject({ method: "GET", url: "/api/health" });
+      const unauthorizedResponse = await app.inject({ method: "GET", url: "/api/public-snapshot" });
+      const authorizedResponse = await app.inject({
+        method: "GET",
+        url: "/api/public-snapshot",
+        headers: { authorization: `Basic ${Buffer.from("admin:secret").toString("base64")}` }
+      });
+
+      expect(healthResponse.statusCode).toBe(200);
+      expect(unauthorizedResponse.statusCode).toBe(401);
+      expect(unauthorizedResponse.headers["www-authenticate"]).toContain("Basic");
+      expect(authorizedResponse.statusCode).toBe(200);
+    }, { env: { basicAuth: { username: "admin", password: "secret" } } });
+  });
+
   it("serves JSON 404s for API routes and index HTML for SPA routes", async () => {
     const staticDir = path.join(await mkdtemp(path.join(os.tmpdir(), "homepage-static-")), "client");
     await mkdir(staticDir, { recursive: true });
     await writeFile(path.join(staticDir, "index.html"), "<!doctype html><h1>Homepage</h1>", "utf8");
+    await mkdir(path.join(staticDir, "assets"), { recursive: true });
+    await writeFile(path.join(staticDir, "assets", "app.js"), "console.log('app');", "utf8");
 
     await withTestApp(async (app) => {
       const apiResponse = await app.inject({ method: "GET", url: "/api/nope" });
       const spaResponse = await app.inject({ method: "GET", url: "/deep/link" });
+      const indexResponse = await app.inject({ method: "GET", url: "/index.html" });
+      const assetResponse = await app.inject({ method: "GET", url: "/assets/app.js" });
 
       expect(apiResponse.statusCode).toBe(404);
       expect(apiResponse.json()).toEqual({ error: "not_found" });
       expect(spaResponse.statusCode).toBe(200);
       expect(spaResponse.headers["content-type"]).toContain("text/html");
       expect(spaResponse.body).toContain("<h1>Homepage</h1>");
+      expect(indexResponse.headers["cache-control"]).toBe("no-cache");
+      expect(assetResponse.headers["cache-control"]).toBe("public, max-age=31536000, immutable");
     }, { env: { staticDir }, serveStatic: true });
   });
 });

@@ -23,6 +23,16 @@ export async function loadConfig(configPath: string): Promise<AppConfig> {
   return appConfigSchema.parse(parsed);
 }
 
+export async function ensureConfigFile(configPath: string): Promise<void> {
+  if (await exists(configPath)) return;
+
+  const dir = path.dirname(configPath);
+  await mkdir(dir, { recursive: true });
+  await writeFile(configPath, YAML.stringify(appConfigSchema.parse({})), { encoding: "utf8", flag: "wx" }).catch(async (error: unknown) => {
+    if (!isFileExistsError(error)) throw error;
+  });
+}
+
 export async function saveConfig(configPath: string, value: unknown): Promise<AppConfig> {
   const parsed = appConfigSchema.parse(value);
   const dir = path.dirname(configPath);
@@ -37,4 +47,8 @@ export async function saveConfig(configPath: string, value: unknown): Promise<Ap
   await writeFile(tempPath, YAML.stringify(parsed), "utf8");
   await rename(tempPath, configPath);
   return parsed;
+}
+
+function isFileExistsError(error: unknown) {
+  return typeof error === "object" && error !== null && "code" in error && error.code === "EEXIST";
 }

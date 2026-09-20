@@ -55,14 +55,15 @@ describe("icon routes", () => {
         })
       );
 
-      const icons = response.json().icons as Array<{ name?: unknown; value?: unknown; source?: unknown }>;
+      const icons = response.json().icons as Array<{ name?: unknown; value?: unknown; source?: unknown; path?: unknown }>;
       expect(icons.length).toBeGreaterThan(0);
       for (const icon of icons) {
-        expect(icon).toEqual({
+        expect(icon).toEqual(expect.objectContaining({
           name: expect.any(String),
           value: expect.any(String),
-          source: expect.stringMatching(/^(simple-icons|mdi)$/)
-        });
+          source: expect.stringMatching(/^(simple-icons|mdi)$/),
+          path: expect.any(String)
+        }));
       }
 
       expect(mdiResponse.statusCode).toBe(200);
@@ -89,6 +90,20 @@ describe("icon routes", () => {
           })
         ])
       );
+    });
+  });
+
+  it("returns one resolved icon path for an exact icon lookup", async () => {
+    await withTestApp(async (app) => {
+      const response = await app.inject({ method: "GET", url: "/api/icons?value=si-github" });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().icons).toEqual([
+        expect.objectContaining({
+          value: "si-github",
+          path: expect.any(String)
+        })
+      ]);
     });
   });
 

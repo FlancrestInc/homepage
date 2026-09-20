@@ -51,15 +51,17 @@ test("bookmark and group settings are split and collapsible", async ({ page }) =
   await expect(page.getByRole("tab", { name: "Groups" })).toBeVisible();
   await page.getByRole("tab", { name: "Bookmarks" }).click();
 
-  const developmentGroup = page.getByRole("button", { name: /Development/ });
-  await expect(developmentGroup).toHaveAttribute("aria-expanded", "false");
-  await developmentGroup.click();
+  const developmentSummary = page.locator(".bookmark-editor-group > summary").filter({ hasText: /^Development/ });
+  const developmentPanel = developmentSummary.locator("..");
+  await expect(developmentPanel).not.toHaveAttribute("open", "");
+  await developmentSummary.click();
 
-  const githubBookmark = page.getByRole("button", { name: /GitHub/ });
-  await expect(githubBookmark).toHaveAttribute("aria-expanded", "false");
-  await githubBookmark.click();
+  const githubSummary = developmentPanel.locator(".nested-editor-panel > summary").filter({ hasText: /^GitHub/ });
+  const githubPanel = githubSummary.locator("..");
+  await expect(githubPanel).not.toHaveAttribute("open", "");
+  await githubSummary.click();
 
-  await expect(page.getByLabel("Bookmark name")).toBeVisible();
+  await expect(githubPanel.getByLabel("Bookmark name")).toBeVisible();
   await page.getByRole("tab", { name: "Groups" }).click();
   await expect(page.getByRole("button", { name: "Add group" })).toBeVisible();
 });
@@ -78,13 +80,13 @@ test("groups editor shows more than twelve groups as collapsible panels", async 
   await page.getByRole("button", { name: "Open settings" }).click();
   await page.getByRole("tab", { name: "Groups" }).click();
 
-  const lastGroup = page.getByRole("button", { name: /Group 14/ });
   await expect(page.locator(".bookmark-group-editor-panel")).toHaveCount(14);
+  const lastGroup = page.locator(".bookmark-group-editor-panel").last();
   await expect(lastGroup).toBeVisible();
-  await expect(lastGroup).toHaveAttribute("aria-expanded", "false");
+  await expect(lastGroup).not.toHaveAttribute("open", "");
 
-  await lastGroup.click();
-  await expect(lastGroup).toHaveAttribute("aria-expanded", "true");
+  await lastGroup.locator("summary").click();
+  await expect(lastGroup).toHaveAttribute("open", "");
   await expect(page.locator(".bookmark-group-editor-panel").last().getByLabel("Name")).toHaveValue("Group 14");
 });
 
@@ -103,8 +105,8 @@ test("groups editor includes groups used by bookmarks but missing from layout", 
   await page.getByRole("tab", { name: "Groups" }).click();
 
   await expect(page.locator(".bookmark-group-editor-panel")).toHaveCount(14);
-  await expect(page.getByRole("button", { name: /Misc/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Self-Hosting/ })).toBeVisible();
+  await expect(page.locator(".bookmark-group-editor-panel").filter({ hasText: /Misc/ })).toBeVisible();
+  await expect(page.locator(".bookmark-group-editor-panel").filter({ hasText: /Self-Hosting/ })).toBeVisible();
 });
 
 test("bookmark editor stays expanded while typing in text fields", async ({ page }) => {
@@ -113,11 +115,12 @@ test("bookmark editor stays expanded while typing in text fields", async ({ page
   await page.getByRole("tab", { name: "Bookmarks" }).click();
 
   await page.getByRole("button", { name: "Add bookmark" }).click();
-  await page.locator(".bookmark-editor-group > summary").click();
-  await page.locator(".nested-editor-panel > summary").click();
-  const bookmarkPanel = page.locator(".nested-editor-panel").first();
+  const firstBookmarkGroup = page.locator(".bookmark-editor-group").first();
+  await firstBookmarkGroup.locator(":scope > summary").click();
+  const bookmarkPanel = firstBookmarkGroup.locator(".nested-editor-panel").first();
+  await bookmarkPanel.locator(":scope > summary").click();
 
-  const nameInput = page.getByLabel("Bookmark name");
+  const nameInput = bookmarkPanel.getByLabel("Bookmark name");
   await nameInput.fill("");
   await nameInput.pressSequentially("GitLab");
 
@@ -131,11 +134,11 @@ test("bookmark editor stays expanded while editing the bookmark group", async ({
   await page.getByRole("tab", { name: "Bookmarks" }).click();
 
   await page.getByRole("button", { name: "Add bookmark" }).click();
-  await page.locator(".bookmark-editor-group > summary").click();
-  await page.locator(".nested-editor-panel > summary").click();
-
-  const bookmarkPanel = page.locator(".nested-editor-panel").first();
-  const groupInput = page.getByLabel("Group");
+  const firstBookmarkGroup = page.locator(".bookmark-editor-group").first();
+  await firstBookmarkGroup.locator(":scope > summary").click();
+  const bookmarkPanel = firstBookmarkGroup.locator(".nested-editor-panel").first();
+  await bookmarkPanel.locator(":scope > summary").click();
+  const groupInput = bookmarkPanel.getByLabel("Group");
   await groupInput.fill("");
   await groupInput.pressSequentially("Labs");
 

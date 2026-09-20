@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import type { PublicSnapshot } from "../../src/client/types";
 
 test.describe("desktop layout", () => {
   test.skip(({ isMobile }) => isMobile, "Desktop layout assertion only applies to desktop viewport.");
@@ -7,6 +8,7 @@ test.describe("desktop layout", () => {
     await page.goto("/");
 
     await expect(page.locator(".app-shell")).toBeVisible();
+    await expect(page.locator(".bookmark-group").first()).toBeVisible();
     const hasVerticalScroll = await page.evaluate(() => document.documentElement.scrollHeight > window.innerHeight);
 
     expect(hasVerticalScroll).toBe(false);
@@ -14,11 +16,12 @@ test.describe("desktop layout", () => {
 
   test("desktop homepage scrolls when the window is too short for the content", async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 360 });
-    await page.route("**/api/public-snapshot", async (route) => {
-      await route.fulfill({ json: publicSnapshotWithGroups(14) });
+    await page.route("**/api/bookmarks-snapshot", async (route) => {
+      await route.fulfill({ json: bookmarkSnapshotWithGroups(14) });
     });
 
     await page.goto("/");
+    await expect(page.locator(".bookmark-group").last()).toBeVisible();
 
     const hasVerticalScroll = await page.evaluate(() => document.documentElement.scrollHeight > window.innerHeight);
     expect(hasVerticalScroll).toBe(true);
@@ -35,16 +38,34 @@ test("editor button is visible", async ({ page }) => {
 });
 
 test("monitor graphs label percentage and time axes", async ({ page }) => {
+  await page.route("**/api/widgets-snapshot", async (route) => {
+    const snapshot = publicSnapshotWithMonitor();
+    await route.fulfill({ json: { generatedAt: snapshot.generatedAt, widgets: snapshot.widgets } });
+  });
   await page.goto("/");
 
   const graph = page.getByRole("img", { name: /CPU and RAM history/ }).first();
 
+  await expect(graph).toBeVisible();
   await expect(graph.getByText("100%")).toBeVisible();
-  await expect(graph.getByText("0%")).toBeVisible();
+  await expect(graph.getByText("0%", { exact: true })).toBeVisible();
   await expect(graph.getByText(/Start/)).toBeVisible();
 });
 
-function publicSnapshotWithGroups(count: number) {
+test("renders bookmarks before the widget response completes", async ({ page }) => {
+  await page.route("**/api/widgets-snapshot", async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    const snapshot = publicSnapshotWithMonitor();
+    await route.fulfill({ json: { generatedAt: snapshot.generatedAt, widgets: snapshot.widgets } });
+  });
+
+  await page.goto("/");
+  await expect(page.locator(".bookmark-group").first()).toBeVisible();
+  await expect(page.locator(".widget-band")).toHaveCount(0);
+  await expect(page.locator(".widget-band")).toBeVisible();
+});
+
+function publicSnapshotWithGroups(count: number): PublicSnapshot {
   return {
     generatedAt: new Date().toISOString(),
     theme: {
@@ -86,5 +107,26 @@ function publicSnapshotWithGroups(count: number) {
         status: "unknown"
       }))
     }))
+  };
+}
+
+function publicSnapshotWithMonitor(): PublicSnapshot {
+  const snapshot = publicSnapshotWithGroups(0);
+  snapshot.widgets.monitors = [{
+    name: "Test server",
+    updatedAt: "2026-05-11T17:20:00.000Z",
+    cpu: { current: 42, history: [{ timestamp: "2026-05-11T17:15:00.000Z", value: 42 }] },
+    ram: { current: 58, history: [{ timestamp: "2026-05-11T17:15:00.000Z", value: 58 }] }
+  }];
+  return snapshot;
+}
+
+function bookmarkSnapshotWithGroups(count: number) {
+  const snapshot = publicSnapshotWithGroups(count);
+  return {
+    generatedAt: snapshot.generatedAt,
+    theme: snapshot.theme,
+    layout: snapshot.layout,
+    groups: snapshot.groups
   };
 }

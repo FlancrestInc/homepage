@@ -22,7 +22,7 @@ export function BookmarkGrid({ groups }: BookmarkGridProps) {
                 title={bookmark.name}
               >
                 <span className="bookmark-icon" aria-hidden="true">
-                  <IconGlyph value={bookmark.icon} color={bookmark.iconColor} />
+                  <IconGlyph value={bookmark.icon} path={bookmark.iconPath} color={bookmark.iconColor} defaultColor={bookmark.iconDefaultColor} />
                 </span>
                 <span className="bookmark-label">{bookmark.name}</span>
               </a>

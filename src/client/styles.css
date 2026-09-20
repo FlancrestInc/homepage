@@ -35,7 +35,8 @@ body {
   min-height: 100vh;
   padding: 14px 18px 16px;
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto auto;
+  align-content: start;
   gap: 14px;
   background: var(--page-background);
   color: var(--primary-text);

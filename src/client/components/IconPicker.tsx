@@ -121,7 +121,7 @@ export function IconPicker({ value, color, onChange, onColorChange }: IconPicker
                 }}
               >
                 <span className="icon-result-preview">
-                  <IconGlyph value={icon.value} color={color} />
+                  <IconGlyph value={icon.value} path={icon.path} color={color} defaultColor={icon.color} />
                 </span>
                 <span className="icon-result-name">{icon.name}</span>
                 <span className="icon-result-source">{icon.source === "simple-icons" ? "Simple Icons" : "MDI"}</span>
