@@ -1,17 +1,19 @@
 import { Settings } from "lucide-react";
 import type { CSSProperties } from "react";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
-import { getBookmarkSnapshot, getWidgetSnapshot } from "./api";
+import { getBookmarkSnapshot, getCockpitSnapshot, getWidgetSnapshot } from "./api";
 import { BookmarkGrid } from "./components/BookmarkGrid";
 import { durationToMs, refreshRetryDelayMs } from "./refreshSchedule";
-import type { BookmarkSnapshot, WidgetSnapshot } from "./types";
+import type { BookmarkSnapshot, CockpitSnapshot, WidgetSnapshot } from "./types";
 
 const EditorDrawer = lazy(() => import("./components/EditorDrawer").then(({ EditorDrawer: component }) => ({ default: component })));
 const WidgetBand = lazy(() => import("./components/WidgetBand").then(({ WidgetBand: component }) => ({ default: component })));
+const CockpitBand = lazy(() => import("./components/CockpitBand").then(({ CockpitBand: component }) => ({ default: component })));
 
 export function App() {
   const [bookmarkSnapshot, setBookmarkSnapshot] = useState<BookmarkSnapshot | null>(null);
   const [widgetSnapshot, setWidgetSnapshot] = useState<WidgetSnapshot | null>(null);
+  const [cockpitSnapshot, setCockpitSnapshot] = useState<CockpitSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
 
@@ -37,10 +39,27 @@ export function App() {
         if (!cancelled) setError(errorMessage(loadError));
       });
 
+    void getCockpitSnapshot()
+      .then((nextSnapshot) => {
+        if (!cancelled) setCockpitSnapshot(nextSnapshot);
+      })
+      .catch((loadError) => {
+        if (!cancelled) setError(errorMessage(loadError));
+      });
+
     return () => {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!cockpitSnapshot) return undefined;
+    let cancelled = false;
+    const timer = window.setInterval(() => {
+      void getCockpitSnapshot().then((nextSnapshot) => { if (!cancelled) setCockpitSnapshot(nextSnapshot); }).catch(() => undefined);
+    }, 60_000);
+    return () => { cancelled = true; window.clearInterval(timer); };
+  }, [Boolean(cockpitSnapshot)]);
 
   useEffect(() => {
     let cancelled = false;
@@ -108,6 +127,7 @@ export function App() {
   return (
     <main className="app-shell" style={shellStyle}>
       <BackgroundMedia background={bookmarkSnapshot.theme.background} />
+      {cockpitSnapshot ? <Suspense fallback={null}><CockpitBand snapshot={cockpitSnapshot} onAcknowledged={(eventId) => setCockpitSnapshot((current) => current ? { ...current, attention: current.attention.filter((event) => event.eventId !== eventId), eventsSummary: { active: Math.max(0, current.eventsSummary.active - 1) } } : current)} /></Suspense> : null}
       <BookmarkGrid groups={bookmarkSnapshot.groups} />
       {widgetSnapshot ? (
         <Suspense fallback={null}>
@@ -132,9 +152,10 @@ export function App() {
   );
 
   async function reloadSnapshot() {
-    const [nextBookmarkSnapshot, nextWidgetSnapshot] = await Promise.all([getBookmarkSnapshot(), getWidgetSnapshot()]);
+    const [nextBookmarkSnapshot, nextWidgetSnapshot, nextCockpitSnapshot] = await Promise.all([getBookmarkSnapshot(), getWidgetSnapshot(), getCockpitSnapshot()]);
     setBookmarkSnapshot(nextBookmarkSnapshot);
     setWidgetSnapshot(nextWidgetSnapshot);
+    setCockpitSnapshot(nextCockpitSnapshot);
     setError(null);
   }
 }

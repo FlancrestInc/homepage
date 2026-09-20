@@ -1,5 +1,6 @@
 import type { AppConfig, Bookmark } from "../config/schema.js";
 import { findIcon } from "../integrations/icons.js";
+import type { AttentionEvent } from "../modules/types.js";
 
 export type HealthStatus = "up" | "down" | "unknown";
 
@@ -13,6 +14,8 @@ export type PublicSnapshotInput = {
   health: CachedHealth;
   weather: unknown;
   monitors: unknown[];
+  modules?: unknown[];
+  attention?: AttentionEvent[];
 };
 
 export function buildBookmarkSnapshot(config: AppConfig, health: CachedHealth, generatedAt = new Date().toISOString()) {
@@ -60,7 +63,10 @@ export function buildPublicSnapshot(config: AppConfig, cached: PublicSnapshotInp
   const generatedAt = new Date().toISOString();
   return {
     ...buildBookmarkSnapshot(config, cached.health, generatedAt),
-    ...buildWidgetSnapshot(config, cached, generatedAt)
+    ...buildWidgetSnapshot(config, cached, generatedAt),
+    modules: cached.modules ?? [],
+    attention: cached.attention ?? [],
+    eventsSummary: { active: (cached.attention ?? []).length }
   };
 }
 

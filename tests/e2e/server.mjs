@@ -6,7 +6,8 @@ const env = {
   port: Number(process.env.PORT ?? 3000),
   configPath: path.resolve(root, process.env.HOMEPAGE_CONFIG_PATH ?? "tests/e2e/fixtures/homepage.yml"),
   cacheDir: path.resolve(root, process.env.HOMEPAGE_CACHE_DIR ?? "test-results/e2e-cache"),
-  staticDir: path.resolve(root, "dist/client")
+  staticDir: path.resolve(root, "dist/client"),
+  dbPath: path.resolve(root, "test-results/e2e-cockpit.db")
 };
 
 const app = await buildApp(env, { startJobs: false });

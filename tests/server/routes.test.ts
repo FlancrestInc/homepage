@@ -59,20 +59,30 @@ describe("routes", () => {
       const response = await app.inject({
         method: "PUT",
         url: "/api/config",
+        headers: { authorization: `Basic ${Buffer.from("admin:secret").toString("base64")}` },
         payload: { bookmarks: [{ name: "GitHub", group: "Development", icon: "si-github", url: "https://github.com" }] }
       });
 
       expect(response.statusCode).toBe(200);
       expect(response.json().bookmarks[0].name).toBe("GitHub");
-    });
+    }, { env: { basicAuth: { username: "admin", password: "secret" } } });
   });
 
   it("rejects invalid config through the config API", async () => {
     await withTestApp(async (app) => {
-      const response = await app.inject({ method: "PUT", url: "/api/config", payload: { theme: { mode: "sepia" } } });
+      const response = await app.inject({ method: "PUT", url: "/api/config", headers: { authorization: `Basic ${Buffer.from("admin:secret").toString("base64")}` }, payload: { theme: { mode: "sepia" } } });
 
       expect(response.statusCode).toBe(400);
       expect(response.json().error).toBe("invalid_config");
+    }, { env: { basicAuth: { username: "admin", password: "secret" } } });
+  });
+
+  it("rejects config writes without trusted identity", async () => {
+    await withTestApp(async (app) => {
+      const response = await app.inject({ method: "PUT", url: "/api/config", payload: { bookmarks: [] } });
+
+      expect(response.statusCode).toBe(401);
+      expect(response.json()).toEqual({ error: "unauthorized" });
     });
   });
 
@@ -103,6 +113,18 @@ describe("routes", () => {
       expect(unauthorizedResponse.headers["www-authenticate"]).toContain("Basic");
       expect(authorizedResponse.statusCode).toBe(200);
     }, { env: { basicAuth: { username: "admin", password: "secret" } } });
+  });
+
+  it("requires a verified proxy identity when proxy trust is enabled", async () => {
+    await withTestApp(async (app) => {
+      const unauthorizedResponse = await app.inject({ method: "GET", url: "/api/public-snapshot" });
+      const authorizedResponse = await app.inject({ method: "GET", url: "/api/public-snapshot", headers: { "x-user": "operator@example.com", origin: "http://localhost" } });
+      const writeResponse = await app.inject({ method: "PUT", url: "/api/config", headers: { "x-user": "operator@example.com", origin: "http://localhost" }, payload: { bookmarks: [] } });
+
+      expect(unauthorizedResponse.statusCode).toBe(401);
+      expect(authorizedResponse.statusCode).toBe(200);
+      expect(writeResponse.statusCode).toBe(200);
+    }, { env: { trustProxy: true, publicOrigin: "http://localhost", trustedProxyCidrs: ["127.0.0.1"], identityHeader: "x-user" } });
   });
 
   it("serves JSON 404s for API routes and index HTML for SPA routes", async () => {

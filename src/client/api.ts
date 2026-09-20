@@ -1,4 +1,4 @@
-import type { AppConfig, BookmarkSnapshot, IconSearchResult, PublicSnapshot, WidgetSnapshot } from "./types";
+import type { AppConfig, AttentionEvent, BookmarkSnapshot, CockpitSnapshot, IconSearchResult, ModuleDefinitionSummary, PublicSnapshot, WidgetSnapshot } from "./types";
 
 export async function getBookmarkSnapshot(): Promise<BookmarkSnapshot> {
   const response = await fetch("/api/bookmarks-snapshot");
@@ -28,6 +28,48 @@ export async function getPublicSnapshot(): Promise<PublicSnapshot> {
   }
 
   return response.json() as Promise<PublicSnapshot>;
+}
+
+export async function getCockpitSnapshot(): Promise<CockpitSnapshot> {
+  const response = await fetch("/api/cockpit-snapshot");
+  if (!response.ok) throw new Error(await responseErrorMessage(response, "Failed to load cockpit"));
+  return response.json() as Promise<CockpitSnapshot>;
+}
+
+export async function getModules(): Promise<ModuleDefinitionSummary[]> {
+  const response = await fetch("/api/modules");
+  if (!response.ok) throw new Error(await responseErrorMessage(response, "Failed to load modules"));
+  return response.json() as Promise<ModuleDefinitionSummary[]>;
+}
+
+export async function testModule(input: { kind: string; instanceId: string; config: Record<string, unknown>; secretRefs: Record<string, string> }) {
+  const response = await fetch("/api/modules/test", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(input) });
+  if (!response.ok) throw new Error(await responseErrorMessage(response, "Connection test failed"));
+  return response.json() as Promise<{ testId: string; expiresAt: string; fingerprint: string; ok: boolean; message: string }>;
+}
+
+export async function saveModule(input: { kind: string; instanceId: string; name: string; config: Record<string, unknown>; secretRefs: Record<string, string>; testId: string; enabled: boolean }) {
+  const response = await fetch("/api/modules", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(input) });
+  if (!response.ok) throw new Error(await responseErrorMessage(response, "Module save failed"));
+  return response.json();
+}
+
+export async function getModuleDetails(instanceId: string, resourceId = "default") {
+  const response = await fetch(`/api/modules/${encodeURIComponent(instanceId)}/details?resourceId=${encodeURIComponent(resourceId)}`);
+  if (!response.ok) throw new Error(await responseErrorMessage(response, "Details unavailable"));
+  return response.json() as Promise<unknown>;
+}
+
+export async function executeModuleAction(instanceId: string, action: string, input: { resourceId?: string; input?: unknown; confirmationToken?: string }) {
+  const response = await fetch(`/api/modules/${encodeURIComponent(instanceId)}/actions/${encodeURIComponent(action)}`, { method: "POST", headers: { "content-type": "application/json", "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify(input) });
+  if (!response.ok) throw new Error(await responseErrorMessage(response, "Action failed"));
+  return response.json();
+}
+
+export async function acknowledgeAttention(eventId: string): Promise<AttentionEvent> {
+  const response = await fetch(`/api/attention/${encodeURIComponent(eventId)}/acknowledge`, { method: "POST", headers: { "Idempotency-Key": crypto.randomUUID() } });
+  if (!response.ok) throw new Error(await responseErrorMessage(response, "Acknowledgement failed"));
+  return response.json() as Promise<AttentionEvent>;
 }
 
 export async function getConfig(): Promise<AppConfig> {

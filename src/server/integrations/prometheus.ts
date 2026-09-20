@@ -21,6 +21,19 @@ type PrometheusRangeResponse = {
   error?: string;
 };
 
+export async function queryPrometheusValue(input: { baseUrl: string; query: string; timeoutMs?: number; fetchImpl?: FetchImpl }): Promise<number> {
+  const url = serviceUrl(input.baseUrl, "api/v1/query");
+  url.searchParams.set("query", input.query);
+  const response = await (input.fetchImpl ?? fetch)(url, { signal: AbortSignal.timeout(input.timeoutMs ?? 5000) });
+  if (!response.ok) throw new Error(`Prometheus query failed with status ${response.status}`);
+  const body = (await response.json()) as PrometheusRangeResponse;
+  if (body.status !== "success" || !isPrometheusData(body.data)) throw new Error(body.error ?? "Prometheus query failed");
+  if (body.data.result.length !== 1) throw new Error("Prometheus query must return exactly one sample");
+  const sample = (body.data.result[0] as { value?: unknown }).value;
+  if (!Array.isArray(sample) || sample.length < 2 || !Number.isFinite(Number(sample[1]))) throw new Error("Prometheus query returned a non-numeric sample");
+  return Number(sample[1]);
+}
+
 export async function queryPrometheusRange(input: PrometheusRangeInput): Promise<MetricPoint[]> {
   const url = serviceUrl(input.baseUrl, "api/v1/query_range");
   url.searchParams.set("query", input.query);

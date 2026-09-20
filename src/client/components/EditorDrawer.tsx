@@ -6,6 +6,7 @@ import type { AppConfig } from "../types";
 import { BookmarkEditor, BookmarkGroupEditor } from "./BookmarkEditor";
 import { ThemeEditor } from "./ThemeEditor";
 import { WidgetEditor } from "./WidgetEditor";
+import { ModuleSetupWizard } from "./ModuleSetupWizard";
 
 type EditorDrawerProps = {
   open: boolean;
@@ -13,7 +14,7 @@ type EditorDrawerProps = {
   onSaved: () => Promise<void>;
 };
 
-type TabId = "bookmarks" | "groups" | "widgets" | "theme" | "health" | "raw";
+type TabId = "bookmarks" | "groups" | "widgets" | "theme" | "health" | "services" | "raw";
 
 const tabs: Array<{ id: TabId; label: string }> = [
   { id: "bookmarks", label: "Bookmarks" },
@@ -21,6 +22,7 @@ const tabs: Array<{ id: TabId; label: string }> = [
   { id: "widgets", label: "Widgets" },
   { id: "theme", label: "Theme" },
   { id: "health", label: "Health" },
+  { id: "services", label: "Services" },
   { id: "raw", label: "Raw Config" }
 ];
 
@@ -70,6 +72,7 @@ export function EditorDrawer({ open, onClose, onSaved }: EditorDrawerProps) {
   }, [open, loading]);
 
   const tabPanel = useMemo(() => {
+    if (activeTab === "services") return <ModuleSetupWizard onSaved={onSaved} />;
     if (!draft) return null;
 
     if (activeTab === "bookmarks") return <BookmarkEditor config={draft} onChange={handleDraftChange} />;

@@ -8,6 +8,15 @@ import { startScheduler } from "./jobs/scheduler.js";
 import { registerConfigRoutes } from "./routes/config.js";
 import { registerIconRoutes } from "./routes/icons.js";
 import { registerPublicRoutes } from "./routes/public.js";
+import { openDatabase } from "./db/database.js";
+import type { StateStore } from "./db/state.js";
+import { createCoreRegistry, seedV1Instances } from "./modules/catalog.js";
+import { ModuleRunner } from "./modules/runner.js";
+import { AttentionAggregator } from "./attention/aggregator.js";
+import { NotificationDispatcher } from "./notifications/dispatcher.js";
+import { registerModuleRoutes } from "./routes/modules.js";
+import { registerActionRoutes } from "./routes/actions.js";
+import { readIdentity } from "./security/auth.js";
 
 export type BuildOptions = {
   serveStatic?: boolean;
@@ -19,8 +28,22 @@ export async function buildApp(env: AppEnv, options: BuildOptions = {}): Promise
 
   await ensureConfigFile(env.configPath);
 
+  let state: StateStore | undefined;
+  let readOnly = false;
+  try {
+    state = await openDatabase(env);
+    state.markPendingActionsUnknown();
+    seedV1Instances(state);
+  } catch (error) {
+    readOnly = true;
+    app.log.error({ err: error }, "Cockpit database unavailable; running bookmarks in read-only mode");
+  }
+
   app.addHook("onRequest", async (request, reply) => {
-    if (!env.basicAuth || request.url === "/api/health" || isAuthorized(request.headers.authorization, env.basicAuth)) return;
+    if (request.url === "/api/health") return;
+    const basicAuthorized = env.basicAuth ? isAuthorized(request.headers.authorization, env.basicAuth) : false;
+    const proxyAuthorized = env.trustProxy ? Boolean(readIdentity(request, env)) : false;
+    if (basicAuthorized || proxyAuthorized || (!env.basicAuth && !env.trustProxy)) return;
 
     return reply
       .code(401)
@@ -28,11 +51,21 @@ export async function buildApp(env: AppEnv, options: BuildOptions = {}): Promise
       .send({ error: "unauthorized" });
   });
 
-  app.get("/api/health", async () => ({ ok: true }));
+  app.get("/api/health", async () => ({ ok: true, cockpit: readOnly ? "degraded" : "ok" }));
   const scheduler = options.startJobs ?? true ? await startScheduler(env) : undefined;
-  await registerConfigRoutes(app, env, { onConfigSaved: scheduler?.reload });
+  const registry = createCoreRegistry();
+  const dispatcher = state ? new NotificationDispatcher(state, env) : undefined;
+  const attention = state ? new AttentionAggregator(state, { onTransition: (event, phase) => dispatcher?.notify(event, phase, state?.listInstances().filter((instance) => instance.kind.startsWith("notify.")) ?? []) }) : undefined;
+  const runner = state && attention ? new ModuleRunner(state, registry, env, { onStatus: (result) => { const kind = state?.getInstance(result.instanceId)?.kind; return attention.onStatus(result, kind ? registry.get(kind) : undefined); } }) : undefined;
+  if (runner && options.startJobs !== false) await runner.start();
+  const reminderTimer = state && dispatcher && options.startJobs !== false ? setInterval(() => { void dispatcher.remind(state?.listActiveAttention() ?? [], state?.listInstances().filter((instance) => instance.kind.startsWith("notify.")) ?? []); }, 60_000) : undefined;
+  await registerConfigRoutes(app, env, { onConfigSaved: async () => { await scheduler?.reload(); await runner?.reload(); }, readOnly, requireWrite: true });
   await registerIconRoutes(app);
-  await registerPublicRoutes(app, env);
+  await registerPublicRoutes(app, env, state ? { state, registry } : undefined);
+  if (state && runner && attention) {
+    await registerModuleRoutes(app, { env, state, registry, runner, attention });
+    await registerActionRoutes(app, { env, state, registry, runner, attention });
+  }
 
   if (options.serveStatic ?? true) {
     await app.register(fastifyStatic, {
@@ -65,6 +98,9 @@ export async function buildApp(env: AppEnv, options: BuildOptions = {}): Promise
       scheduler.stop();
     });
   }
+  if (runner) app.addHook("onClose", async () => runner.stop());
+  if (reminderTimer) app.addHook("onClose", async () => clearInterval(reminderTimer));
+  if (state) app.addHook("onClose", async () => state?.close());
 
   return app;
 }

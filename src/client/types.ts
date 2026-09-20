@@ -90,6 +90,26 @@ export type WidgetSnapshot = {
 
 export type PublicSnapshot = BookmarkSnapshot & WidgetSnapshot;
 
+export type ModuleStatus = "healthy" | "degraded" | "down" | "unknown";
+export type ModuleStatusResource = {
+  instanceId: string;
+  resourceId: string;
+  status: ModuleStatus;
+  checkedAt: string;
+  lastSuccessAt: string | null;
+  staleAt: string | null;
+  freshness: "fresh" | "stale" | "never_succeeded";
+  summary: string;
+  fields: Array<{ key: string; status: "healthy" | "degraded" | "unknown"; value: string | number | boolean | null; error?: string }>;
+  evidence: Record<string, string | number | boolean | null>;
+  error?: string;
+};
+export type ModuleSummary = { instanceId: string; kind: string; name: string; enabled: boolean; status: ModuleStatus; statuses: ModuleStatusResource[]; links: string[] };
+export type AttentionEvent = { eventId: string; eventKey: string; instanceId: string; resourceId: string; conditionId: string; severity: "warning" | "critical"; state: "open" | "acknowledged" | "recovered"; title: string; summary: string; evidence: Record<string, string | number | boolean | null>; openedAt: string; lastSeenAt: string; acknowledgedAt?: string; nextAction?: { label: string; action: string }; link?: string };
+export type CockpitSnapshot = { generatedAt: string; modules: ModuleSummary[]; attention: AttentionEvent[]; eventsSummary: { active: number } };
+export type ModuleSetupField = { key: string; label: string; type: "text" | "url" | "number" | "boolean" | "select" | "secretRef"; required?: boolean; options?: string[]; placeholder?: string };
+export type ModuleDefinitionSummary = { kind: string; name: string; category: string; version: number; setupSchema: { fields: ModuleSetupField[] }; secretFields: string[]; actions?: Array<{ id: string; label: string; requiresConfirmation?: boolean }> ; instances: Array<{ instanceId: string; name: string; enabled: boolean; config: Record<string, unknown>; secretRefs: Record<string, string> }> };
+
 export type BookmarkHealthConfig = {
   mode: "default" | "custom" | "disabled";
   url?: string;
