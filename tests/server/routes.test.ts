@@ -127,6 +127,17 @@ describe("routes", () => {
     }, { env: { trustProxy: true, publicOrigin: "http://localhost", trustedProxyCidrs: ["127.0.0.1"], identityHeader: "x-user" } });
   });
 
+  it("allows page loads and writes when upstream-only authentication is explicit", async () => {
+    await withTestApp(async (app) => {
+      const publicResponse = await app.inject({ method: "GET", url: "/api/public-snapshot" });
+      const writeResponse = await app.inject({ method: "PUT", url: "/api/config", payload: { bookmarks: [] } });
+
+      expect(publicResponse.statusCode).toBe(200);
+      expect(publicResponse.headers["www-authenticate"]).toBeUndefined();
+      expect(writeResponse.statusCode).toBe(200);
+    }, { env: { authDisabled: true } });
+  });
+
   it("serves JSON 404s for API routes and index HTML for SPA routes", async () => {
     const staticDir = path.join(await mkdtemp(path.join(os.tmpdir(), "homepage-static-")), "client");
     await mkdir(staticDir, { recursive: true });

@@ -37,6 +37,7 @@ Useful environment variables:
 - `HOMEPAGE_CACHE_DIR`: explicit cache directory path.
 - `HOMEPAGE_STATIC_DIR`: static client build directory, default `dist/client`.
 - `HOMEPAGE_AUTH_USER` and `HOMEPAGE_AUTH_PASSWORD`: enable built-in HTTP Basic authentication.
+- `COCKPIT_DISABLE_AUTH`: explicitly disable all in-app authentication checks when an upstream proxy is the sole access boundary; use only when the container port is network-isolated.
 - `COCKPIT_DATA_DIR` and `COCKPIT_DB_PATH`: choose the SQLite state location; the explicit database path wins.
 - `COCKPIT_TRUST_PROXY`, `COCKPIT_PUBLIC_ORIGIN`, `COCKPIT_TRUSTED_PROXY_CIDRS`, and `COCKPIT_IDENTITY_HEADER`: enable verified reverse-proxy identity for module setup, acknowledgements, and actions. Authelia commonly forwards `Remote-User`; Cloudflare Access commonly provides `cf-access-authenticated-user-email`.
 - `COCKPIT_ALLOWED_SECRET_REFS`: comma-separated `env:NAME` or `docker:NAME` references allowed for connector secrets.
@@ -45,7 +46,7 @@ Useful environment variables:
 
 ## Deployment Notes
 
-Access control is required. Use either built-in HTTP Basic authentication through `HOMEPAGE_AUTH_USER` and `HOMEPAGE_AUTH_PASSWORD`, or put the app behind an authenticated reverse proxy such as Cloudflare Zero Trust or Authelia and omit both built-in credentials. For proxy auth, set `COCKPIT_TRUST_PROXY=true`, `COCKPIT_PUBLIC_ORIGIN` to the browser-facing origin, `COCKPIT_TRUSTED_PROXY_CIDRS` to the proxy's source CIDR as seen by the container, and `COCKPIT_IDENTITY_HEADER` to the header the proxy overwrites with the authenticated identity. Do not publish the container directly outside that proxy. The health endpoint remains available without credentials for container probes.
+Use either built-in HTTP Basic authentication through `HOMEPAGE_AUTH_USER` and `HOMEPAGE_AUTH_PASSWORD`, or put the app behind an authenticated reverse proxy such as Cloudflare Zero Trust or Authelia and omit both built-in credentials. The preferred proxy mode keeps the app's verified identity checks enabled: set `COCKPIT_TRUST_PROXY=true`, `COCKPIT_PUBLIC_ORIGIN` to the browser-facing origin, `COCKPIT_TRUSTED_PROXY_CIDRS` to the proxy's source CIDR as seen by the container, and `COCKPIT_IDENTITY_HEADER` to the header the proxy overwrites with the authenticated identity. If the proxy fully owns authentication and the container port is otherwise network-isolated, `COCKPIT_DISABLE_AUTH=true` removes the app-level challenge and allows all routes. Do not publish the container directly outside that proxy. The health endpoint remains available without credentials for container probes.
 
 Server monitors are Prometheus-first. Configure `widgets.monitors.prometheusUrl`, `cpuQuery`, and `ramQuery` when your Prometheus stack already has the metrics. Glances remains available per monitor by setting the monitor source to `glances` and providing `glancesUrl`.
 

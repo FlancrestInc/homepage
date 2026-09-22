@@ -40,6 +40,7 @@ export async function buildApp(env: AppEnv, options: BuildOptions = {}): Promise
   }
 
   app.addHook("onRequest", async (request, reply) => {
+    if (env.authDisabled) return;
     if (request.url === "/api/health") return;
     const basicAuthorized = env.basicAuth ? isAuthorized(request.headers.authorization, env.basicAuth) : false;
     const proxyAuthorized = env.trustProxy ? Boolean(readIdentity(request, env)) : false;

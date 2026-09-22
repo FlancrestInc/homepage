@@ -7,6 +7,7 @@ export type AppEnv = {
   staticDir: string;
   dataDir?: string;
   dbPath?: string;
+  authDisabled?: boolean;
   trustProxy?: boolean;
   publicOrigin?: string;
   trustedProxyCidrs?: string[];
@@ -35,6 +36,7 @@ export function readEnv(env = process.env): AppEnv {
     staticDir: env.HOMEPAGE_STATIC_DIR ?? path.resolve("dist/client"),
     dataDir,
     dbPath: env.COCKPIT_DB_PATH ?? path.join(dataDir ?? path.dirname(configPath), "cockpit.db"),
+    authDisabled: parseBoolean(env.COCKPIT_DISABLE_AUTH, false),
     trustProxy: parseBoolean(env.COCKPIT_TRUST_PROXY, false),
     publicOrigin: env.COCKPIT_PUBLIC_ORIGIN || undefined,
     trustedProxyCidrs: parseList(env.COCKPIT_TRUSTED_PROXY_CIDRS),

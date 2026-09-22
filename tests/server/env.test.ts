@@ -31,4 +31,8 @@ describe("environment configuration", () => {
     expect(value.trustedProxyCidrs).toEqual(["10.0.0.0/8", "127.0.0.1"]);
     expect(value.allowedSecretRefs).toEqual(["env:NTFY_TOKEN", "docker:apprise-url"]);
   });
+
+  it("parses explicit upstream-only authentication mode", () => {
+    expect(readEnv({ COCKPIT_DISABLE_AUTH: "true" }).authDisabled).toBe(true);
+  });
 });

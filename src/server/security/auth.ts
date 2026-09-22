@@ -8,6 +8,7 @@ export function readIdentity(request: FastifyRequest, env: AppEnv): string | und
 }
 
 export function requireWriteIdentity(request: FastifyRequest, env: AppEnv): string {
+  if (env.authDisabled) return "upstream-authenticated";
   const proxyIdentity = readIdentity(request, env);
   if (env.trustProxy) {
     if (!proxyIdentity || !env.publicOrigin || request.headers.origin !== env.publicOrigin) throw new AuthError("forbidden", 403);

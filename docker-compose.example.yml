@@ -14,6 +14,8 @@ services:
       HOMEPAGE_AUTH_USER: ${HOMEPAGE_AUTH_USER:-}
       HOMEPAGE_AUTH_PASSWORD: ${HOMEPAGE_AUTH_PASSWORD:-}
       # For Cloudflare Access or Authelia, set these and do not publish port 13000 directly.
+      # If the proxy fully owns authentication and the container port is network-isolated, use this instead:
+      # COCKPIT_DISABLE_AUTH: "true"
       # COCKPIT_TRUST_PROXY: "true"
       # COCKPIT_PUBLIC_ORIGIN: https://homepage.example.com
       # COCKPIT_TRUSTED_PROXY_CIDRS: 172.18.0.0/16
