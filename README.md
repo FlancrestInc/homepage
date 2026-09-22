@@ -38,14 +38,14 @@ Useful environment variables:
 - `HOMEPAGE_STATIC_DIR`: static client build directory, default `dist/client`.
 - `HOMEPAGE_AUTH_USER` and `HOMEPAGE_AUTH_PASSWORD`: enable built-in HTTP Basic authentication.
 - `COCKPIT_DATA_DIR` and `COCKPIT_DB_PATH`: choose the SQLite state location; the explicit database path wins.
-- `COCKPIT_TRUST_PROXY`, `COCKPIT_PUBLIC_ORIGIN`, `COCKPIT_TRUSTED_PROXY_CIDRS`, and `COCKPIT_IDENTITY_HEADER`: enable verified reverse-proxy identity for module setup, acknowledgements, and actions.
+- `COCKPIT_TRUST_PROXY`, `COCKPIT_PUBLIC_ORIGIN`, `COCKPIT_TRUSTED_PROXY_CIDRS`, and `COCKPIT_IDENTITY_HEADER`: enable verified reverse-proxy identity for module setup, acknowledgements, and actions. Authelia commonly forwards `Remote-User`; Cloudflare Access commonly provides `cf-access-authenticated-user-email`.
 - `COCKPIT_ALLOWED_SECRET_REFS`: comma-separated `env:NAME` or `docker:NAME` references allowed for connector secrets.
 - `COCKPIT_DOCKER_SECRETS_DIR`: Docker secret directory, default `/run/secrets`.
 - `COCKPIT_SSH_ALLOWLIST`: comma-separated `alias=host` entries for the fixed read-only SSH collectors.
 
 ## Deployment Notes
 
-Access control is required. The Docker examples enable built-in HTTP Basic authentication through `HOMEPAGE_AUTH_USER` and `HOMEPAGE_AUTH_PASSWORD`; replace the example password before use. Alternatively, put the app behind an authenticated reverse proxy such as Cloudflare Zero Trust and omit the built-in credentials. The health endpoint remains available without credentials for container probes.
+Access control is required. Use either built-in HTTP Basic authentication through `HOMEPAGE_AUTH_USER` and `HOMEPAGE_AUTH_PASSWORD`, or put the app behind an authenticated reverse proxy such as Cloudflare Zero Trust or Authelia and omit both built-in credentials. For proxy auth, set `COCKPIT_TRUST_PROXY=true`, `COCKPIT_PUBLIC_ORIGIN` to the browser-facing origin, `COCKPIT_TRUSTED_PROXY_CIDRS` to the proxy's source CIDR as seen by the container, and `COCKPIT_IDENTITY_HEADER` to the header the proxy overwrites with the authenticated identity. Do not publish the container directly outside that proxy. The health endpoint remains available without credentials for container probes.
 
 Server monitors are Prometheus-first. Configure `widgets.monitors.prometheusUrl`, `cpuQuery`, and `ramQuery` when your Prometheus stack already has the metrics. Glances remains available per monitor by setting the monitor source to `glances` and providing `glancesUrl`.
 
